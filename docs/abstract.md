@@ -1,0 +1,13 @@
+# Abstract (Draft)
+
+Kubernetes security assessments often rely on static configuration scanning or attack-path modeling to prioritize risk. These approaches can identify what might be risky, but they often do not prove what is actually exploitable from an in-cluster foothold. As a result, defenders can be left with many “possible” paths and limited evidence of which multi-step chains can be executed under runtime constraints.
+
+This project presents **Chain Reaction**, a Go-based, in-cluster Kubernetes agent that runs as a standard Pod using only its assigned ServiceAccount credentials and normal cluster networking. It assumes no node access and no out-of-band credentials. Chain Reaction focuses on multi-step chains across permissions, Secrets access, network pivots, and takeover preconditions.
+
+In this work, a chain step is **validated** only when the agent can execute that step from inside the Pod using bounded probes and Kubernetes API interactions and capture supporting evidence (rather than inferring reachability from configuration or graphs). The agent uses an LLM-guided, tool-based loop to discover relevant cluster objects, summarize effective permissions, test reachability, and validate steps incrementally while recording why steps fail (for example RBAC denial, unreachable targets, guardrail enforcement, or missing prerequisites). All actions are bounded by guardrails, including allow-lists, rate limits, a time budget, and stop conditions.
+
+The primary deliverable is a kill-chain graph plus an evidence bundle that includes raw API responses and probe outputs, timestamps, and object snapshots. Graph edges are labeled as validated or theoretical based on direct evidence.
+
+Evaluation is planned in Kubernetes Goat (an intentionally vulnerable training environment). Metrics include scenario coverage (goal: runtime-validated chains for at least 80% of scenarios), time-to-chain, API call volume, and run-to-run stability of validated edges. As baselines, results will be compared against theoretical attack-path modeling and in-Pod discovery scanning, reporting the fraction of theoretical paths that become runtime-validated chains.
+
+**Index Terms:** Kubernetes, assumed breach, attack-chain validation, RBAC, evidence logging

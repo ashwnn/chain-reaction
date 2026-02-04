@@ -1,0 +1,34 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+\title{Chain Reaction: LLM-Guided Validation of Kubernetes Attack Chains}
+
+\author{
+\IEEEauthorblockN{Ashwin Charathsandran}
+\IEEEauthorblockA{
+FSCT-8611 Graduation Project\\
+British Columbia Institute of Technology (BCIT)\\
+Vancouver, BC, Canada
+}
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Kubernetes security assessments commonly emphasize static configuration scanning and attack-path modeling to prioritize risk. While these techniques identify potentially dangerous conditions, they often fail to demonstrate what is actually exploitable from an in-cluster foothold under runtime constraints. Consequently, defenders may face many plausible multi-step paths with limited evidence indicating which chains can be executed in practice.
+\noindent
+This project introduces \emph{Chain Reaction}, a Go-based in-cluster agent designed to run as a standard Kubernetes Pod. The agent operates solely with its assigned ServiceAccount credentials and ordinary cluster networking, assuming no node access and no out-of-band secrets. Chain Reaction targets multi-step attack chains spanning RBAC permissions, secret access, network pivots, and takeover preconditions. A chain step is considered validated only when the agent can execute the step from within the Pod using bounded probes and Kubernetes API interactions, and can capture supporting artifacts. Steps that cannot be executed are explicitly classified with failure reasons such as RBAC denial, unreachable network targets, guardrail enforcement, or missing prerequisites.
+\noindent
+To drive efficient exploration, the system uses an LLM-guided, tool-oriented loop to enumerate relevant cluster objects, summarize effective permissions, test reachability, and validate steps incrementally while enforcing safety guardrails. Guardrails include allow-lists, rate limits, a time budget, and stop conditions to constrain both impact and cost.
+\noindent
+The primary output is a kill-chain graph paired with an evidence bundle containing raw API responses, probe outputs, timestamps, and object snapshots. Graph edges are labeled as validated or theoretical based on direct runtime evidence. Evaluation is planned in Kubernetes Goat, measuring scenario coverage (targeting validated chains for at least 80\% of scenarios), time-to-chain, API call volume, and run-to-run stability. Results will be compared against theoretical attack-path modeling and in-Pod discovery scanning by reporting the fraction of theoretical paths that become runtime-validated chains.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Kubernetes, assumed breach, attack-chain validation, RBAC, evidence logging
+\end{IEEEkeywords}
+
+\end{document}
