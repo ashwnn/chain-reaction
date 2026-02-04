@@ -20,7 +20,7 @@ A chain step is **validated** only when the agent can execute it from within the
 - **Adaptive chaining:** uses an LLM-guided, tool-based loop to plan and reprioritize actions based on discovered objects, permissions, and runtime constraints.
 - **Safe proof actions:** controlled, read-only probes where possible; bounded-impact validation where necessary; explicit guardrails (allow-lists, rate limits, time budget, stop conditions).
 - **Evidence-backed output:** raw API responses, probe outputs, object snapshots, timestamps, and audit trails packaged into a reproducible evidence bundle.
-- **Phase-labeled attack graph:** nodes and edges typed by Kubernetes primitive (RBAC, Secret, Service, Pod, etc.) and annotated with a phase (for example, recon, execution, privilege escalation); edges explicitly labeled as validated or theoretical; each validated edge tied to step-level evidence.
+- **Phase-labeled attack graph:** nodes and edges typed by Kubernetes primitive (RBAC, Secret, Service, Pod, etc.) and annotated with a phase; edges explicitly labeled as validated or theoretical; each validated edge tied to step-level evidence.
 
 ## Deliverables
 

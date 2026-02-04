@@ -79,7 +79,7 @@ A defensible design pattern is:
 
 - Use an attack-graph or rule-based model as a hypothesis generator (what might chain).
 - Use runtime observations (API responses, reachability probes, logs) to confirm or refute edges.
-- Generate an evidence-backed, phase-labeled attack graph in which each node/edge is annotated with a phase (for example, recon, execution, privilege escalation) and supported by collected artifacts.
+- Generate an evidence-backed, phase-labeled attack graph in which each node/edge is annotated with a phase and supported by collected artifacts.
 
 ---
 
