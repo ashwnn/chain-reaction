@@ -1,6 +1,8 @@
 # Chain Reaction
 
-An autonomous, in-cluster Kubernetes agent that validates multi-step attack chains and produces evidence-backed kill-chain graphs.
+An autonomous, in-cluster Kubernetes agent that validates multi-step attack chains.
+
+We generate an evidence-backed, phase-labeled attack graph in which each node/edge is annotated with a phase (for example, recon, execution, privilege escalation) and supported by collected artifacts.
 
 ## Problem
 
@@ -18,11 +20,11 @@ A chain step is **validated** only when the agent can execute it from within the
 - **Adaptive chaining:** uses an LLM-guided, tool-based loop to plan and reprioritize actions based on discovered objects, permissions, and runtime constraints.
 - **Safe proof actions:** controlled, read-only probes where possible; bounded-impact validation where necessary; explicit guardrails (allow-lists, rate limits, time budget, stop conditions).
 - **Evidence-backed output:** raw API responses, probe outputs, object snapshots, timestamps, and audit trails packaged into a reproducible evidence bundle.
-- **Kill-chain graph:** nodes and edges typed by Kubernetes primitive (RBAC, Secret, Service, Pod, etc.); edges explicitly labeled as validated or theoretical; each validated edge tied to step-level evidence.
+- **Phase-labeled attack graph:** nodes and edges typed by Kubernetes primitive (RBAC, Secret, Service, Pod, etc.) and annotated with a phase (for example, recon, execution, privilege escalation); edges explicitly labeled as validated or theoretical; each validated edge tied to step-level evidence.
 
 ## Deliverables
 
-1. **Kill-chain graph** (JSON + optional visual render): multi-step attack paths with validated vs theoretical edges and evidence references.
+1. **Phase-labeled attack graph** (JSON + optional visual render): multi-step attack paths with validated vs theoretical edges, phase annotations per node/edge, and evidence references.
 2. **Evidence bundle**: step logs, API responses, object snapshots, timestamps, and a manifest for integrity verification.
 3. **Academic evaluation**: coverage on Kubernetes Goat scenarios, comparison against baselines (static scanners, attack-graph tools), and reproducibility analysis.
 

@@ -28,7 +28,7 @@ Use a year filter (2020–2026) and combine at least one term from each group:
 **Include (must satisfy all):**
 
 - Published 2020–2026.
-- Directly informs at least one of: multi-step attack paths, attack-graph/kill-chain modeling, runtime exploitability validation, Kubernetes primitives as attack surfaces, or LLM-based reasoning that reduces false positives using context.
+- Directly informs at least one of: multi-step attack paths, attack-graph/attack-chain modeling, runtime exploitability validation, Kubernetes primitives as attack surfaces, or LLM-based reasoning that reduces false positives using context.
 - Provides enough methodological detail to evaluate threat model and evidence quality (industry reports are acceptable if detailed).
 
 **Exclude:**
@@ -49,7 +49,7 @@ Use a year filter (2020–2026) and combine at least one term from each group:
 | Work | Topic | Method | Key findings | Relevance to proposal | Gap |
 |---|---|---|---|---|---|
 | Minna et al. (2021) | Kubernetes networking, CNI behavior, unexpected lateral movement | Hybrid: conceptual modeling + reproducible testbed | Kubernetes networking abstractions can invalidate traditional segmentation assumptions and enable unexpected movement. | Motivates runtime reachability validation rather than relying purely on policy intent. | Limited automation; no autonomous validation agent or evidence pipeline. |
-| Blaise & Rebecchi (2022) | Attack path extraction from Helm charts | Hybrid: graph construction + scoring + evaluation | Graph-based extraction of deployment security models and risky paths from packaging artifacts. | Matches “kill-chain graph” output and configuration-derived hypotheses. | Primarily config-derived; does not resolve runtime truth (reachability, live permissions). |
+| Blaise & Rebecchi (2022) | Attack path extraction from Helm charts | Hybrid: graph construction + scoring + evaluation | Graph-based extraction of deployment security models and risky paths from packaging artifacts. | Matches a phase-labeled attack graph output and configuration-derived hypotheses. | Primarily config-derived; does not resolve runtime truth (reachability, live permissions). |
 | Yang et al. (2023) | Multi-stage takeover via excessive permissions in third-party apps | Hybrid: exploitation analysis + empirical characterization | Over-permissive third-party components can enable multi-step escalation; RBAC is a key substrate. | Supports assumed-breach chains involving ServiceAccounts, RBAC, and Secrets. | Focused on a specific ecosystem slice; not a reusable autonomous validation framework. |
 | Rahman et al. (2023) | Misconfigurations in Kubernetes manifests at scale | Hybrid: empirical study + tool construction | Catalogs common misconfiguration classes and provides detection tooling at scale. | Good baseline for static scanners and prevalence grounding. | Static-only; cannot confirm exploitability under runtime constraints. |
 | Datadog Security Labs: KubeHound (2023) | Kubernetes attack graph tooling | Hybrid: engineering artifact + documented modeling | Builds an attack-graph representation and computes plausible paths between assets. | Strong baseline hypothesis generator to compare against a validator. | Does not execute proof actions or produce step-level evidence. |
@@ -57,7 +57,7 @@ Use a year filter (2020–2026) and combine at least one term from each group:
 | Shamim et al. (2025) | Dynamic application security testing (DAST) for Kubernetes deployments | Quantitative evaluation | Frames runtime/dynamic testing for Kubernetes and evaluates detection vs static approaches. | Informs evaluation design and baseline comparisons under runtime context. | Tool-driven rather than autonomous; limited multi-step assumed-breach chaining. |
 | Wiz Research + Kubernetes advisory (2025) | IngressNightmare (Ingress NGINX admission-controller RCE chain) | Hybrid: vulnerability analysis + exposure assessment | Demonstrates a high-impact chain where internal reachability and admission surfaces can lead to cluster-wide compromise. | Strong motivating exemplar for safe reachability + behavior validation. | Not a standardized experimental framework or benchmark. |
 | Rostamipoor et al. (2025) | Protecting Secrets from leakage under excessive permissions (KubeKeeper) | Hybrid: system + evaluation | Protects Kubernetes Secrets under excessive permissions via mechanism-level controls. | Grounds the “impact” end of many chains (Secrets access). | Defensive focus; does not validate diverse offensive chains end-to-end. |
-| Sgan Cohen et al. (2025) | LLM-assisted Kubernetes hardening using manifests and runtime logs (KubeGuard) | Hybrid: workflow + quantitative quality metrics | Uses LLM workflows to propose least-privilege changes informed by runtime behavior. | Closest prior art for runtime-context-informed reasoning. | Hardening recommender rather than a kill-chain validator with proven edges and evidence. |
+| Sgan Cohen et al. (2025) | LLM-assisted Kubernetes hardening using manifests and runtime logs (KubeGuard) | Hybrid: workflow + quantitative quality metrics | Uses LLM workflows to propose least-privilege changes informed by runtime behavior. | Closest prior art for runtime-context-informed reasoning. | Hardening recommender rather than an attack-chain validator with proven edges and evidence. |
 
 ---
 
@@ -73,21 +73,21 @@ Use a year filter (2020–2026) and combine at least one term from each group:
 - Real compromise paths depend on what is deployed, reachable, and permissioned at runtime.
 - Deterministic tools typically do not re-plan when blocked by missing permissions, changing topology, or environment-specific constraints.
 
-### How autonomous reasoning agents could validate multi-stage kill chains
+### How autonomous reasoning agents could validate multi-stage attack chains
 
 A defensible design pattern is:
 
 - Use an attack-graph or rule-based model as a hypothesis generator (what might chain).
 - Use runtime observations (API responses, reachability probes, logs) to confirm or refute edges.
-- Produce a kill-chain graph with edges explicitly labeled as validated vs theoretical, where validated edges have evidence artifacts suitable for review.
+- Generate an evidence-backed, phase-labeled attack graph in which each node/edge is annotated with a phase (for example, recon, execution, privilege escalation) and supported by collected artifacts.
 
 ---
 
 ## Defensible research gaps that justify Chain Reaction
 
 1. **End-to-end autonomous validation from an assumed-breach Pod is rarely evaluated as a complete system.**
-2. **Benchmarks for “validated” Kubernetes kill chains are not standardized across tool classes.**
-3. **Runtime context is acknowledged as crucial, but rarely integrated into explainable, reviewable kill-chain outputs with auditable evidence.**
+2. **Benchmarks for “validated” Kubernetes attack chains are not standardized across tool classes.**
+3. **Runtime context is acknowledged as crucial, but rarely integrated into explainable, reviewable outputs with auditable evidence.**
 
 ## References
 

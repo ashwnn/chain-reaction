@@ -65,7 +65,7 @@
 
 **Why this category does not fully solve the problem:**
 
-- These are generally **defensive sensors/enforcers**. They are not built to autonomously plan, chain, and validate exploit paths from a compromised Pod while producing a reproducible kill-chain graph with evidence.
+- These are generally **defensive sensors/enforcers**. They are not built to autonomously plan, chain, and validate exploit paths from a compromised Pod while generating an evidence-backed, phase-labeled attack graph in which each node/edge is annotated with a phase (for example, recon, execution, privilege escalation) and supported by collected artifacts.
 
 ---
 
@@ -98,7 +98,7 @@
 **Why this category does not fully solve the problem:**
 
 - Most emulation frameworks are scenario-driven: you choose what to run.
-- They typically do not discover unknown cluster-specific attack chains from a compromised Pod and then output a defensible kill-chain graph with evidence.
+- They typically do not discover unknown cluster-specific attack chains from a compromised Pod and then generate an evidence-backed, phase-labeled attack graph in which each node/edge is annotated with a phase (for example, recon, execution, privilege escalation) and supported by collected artifacts.
 
 ---
 
@@ -106,7 +106,7 @@
 
 **Unmet capability (crisp definition):**
 
-- A Kubernetes-native agent that starts from an assumed-breach Pod identity and network position, then autonomously discovers and validates multi-step attack chains across RBAC, ServiceAccounts, Secrets, and workload pivots, producing a reproducible kill-chain graph with evidence artifacts.
+- A Kubernetes-native agent that starts from an assumed-breach Pod identity and network position, then autonomously discovers and validates multi-step attack chains across RBAC, ServiceAccounts, Secrets, and workload pivots. We generate an evidence-backed, phase-labeled attack graph in which each node/edge is annotated with a phase (for example, recon, execution, privilege escalation) and supported by collected artifacts.
 
 **Minimum differentiators to credibly claim novelty:**
 
@@ -118,7 +118,7 @@
 
 **Positioning statement:**
 
-- Chain Reaction is an assumed-breach, in-cluster Kubernetes agent that does not just flag misconfigurations. It autonomously validates which findings are truly exploitable by chaining real cluster conditions into an evidence-backed kill chain you can reproduce and report.
+- Chain Reaction is an assumed-breach, in-cluster Kubernetes agent that does not just flag misconfigurations. It autonomously validates which findings are truly exploitable. We generate an evidence-backed, phase-labeled attack graph in which each node/edge is annotated with a phase (for example, recon, execution, privilege escalation) and supported by collected artifacts.
 
 ---
 
