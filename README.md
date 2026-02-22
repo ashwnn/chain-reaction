@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/cover.png" alt="Chain Reaction Logo" width="120">
+  <img src="docs/logo.svg" alt="Chain Reaction Logo" width="120">
 </p>
 
 # Chain Reaction
