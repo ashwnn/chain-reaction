@@ -3,11 +3,25 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 
+\usepackage{cite}
+\usepackage{url}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{makecell}
+\usepackage{array}
+\usepackage{dblfloatfix}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{placeins}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+
 \title{Chain Reaction: LLM-Guided Validation of Kubernetes Attack Chains}
 
 \author{
 \IEEEauthorblockN{Ashwin Charathsandran}
 \IEEEauthorblockA{
+
 FSCT-8611 Graduation Project\\
 British Columbia Institute of Technology (BCIT)\\
 Vancouver, BC, Canada
@@ -30,5 +44,150 @@ The primary output is an evidence-backed, phase-labeled attack graph in which ea
 \begin{IEEEkeywords}
 Kubernetes, assumed breach, attack-chain validation, RBAC, evidence logging
 \end{IEEEkeywords}
+
+\section{Literature Review}
+
+The landscape of cloud-native security research has evolved significantly over the past five years, shifting from theoretical vulnerability enumeration toward autonomous, context-aware exploitation frameworks. This transition is largely driven by the increasing complexity of Kubernetes environments, where traditional network boundaries are replaced by intricate intersections of identity, role-based access control (RBAC), and container-level permissions. In such environments, determining the actual exploitability of a theoretical attack path requires executing multi-step chains from an assumed-breach position.
+
+This literature review synthesizes the state-of-the-art across five primary themes relevant to the validation of Kubernetes attack chains. By evaluating 20 recent academic works and corresponding commercial solutions, this review identifies critical gaps in existing methodologies, establishing the necessity for \emph{Chain Reaction}---an agent specifically designed to execute and provide evidence for in-cluster Kubernetes attack chains.
+
+\subsection{Theme 1: LLM-Driven Autonomous Offensive Security}
+The application of Large Language Models to offensive security has demonstrated that AI agents can effectively plan, execute, and adapt multi-step attacks. Early research focused heavily on prompt engineering for static code analysis, but recent works have constructed autonomous loops that interact dynamically with target environments. While these systems demonstrate the feasibility of the plan-act-observe loop required for autonomous offensive operations, they rely heavily on traditional OS and web-application topologies rather than cloud-native infrastructure, completely omitting the unique privilege primitives found in Kubernetes (e.g., ServiceAccounts, ConfigMaps, and cluster-scoped RBAC roles). Table \ref{tab:litmatrix-theme1} details the key works in this area.
+
+\begin{table*}[t!]
+\centering
+\caption{Theme 1: LLM-Driven Autonomous Offensive Security}
+\label{tab:litmatrix-theme1}
+\scriptsize
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{l p{2.5cm} X X}
+\toprule
+\textbf{Author \& Year} & \textbf{Method} & \textbf{Key Findings} & \textbf{Gap vs. Proposal} \\
+\midrule
+\textbf{Deng et al., 2024} \cite{deng2024pentestgpt} & Hybrid (System Design + Benchmark) & Demonstrates that LLMs can guide multi-step penetration testing via a reasoning, parsing, and tool-invoking architecture. Validates the core plan-act-observe loop required for autonomous operations. & Relies heavily on human-in-the-loop for execution. Oriented towards traditional OS and web-application topology, not cloud-native infrastructure. \\
+\addlinespace
+\textbf{Fang et al., 2024} \cite{fang2024llm} & Quantitative (Agent eval on 15 CVEs) & Shows GPT-4 based agents can autonomously exploit 87\% of tested 1-day vulnerabilities given CVE descriptions. Proves reasoning capability translates to concrete exploit execution. & Focuses on isolated CVEs rather than complex, multi-step privilege escalation chains spanning disparate deployment configurations in Kubernetes. \\
+\addlinespace
+\textbf{Xu et al., 2024} \cite{xu2024autoattacker} & Hybrid (Multi-agent system design) & Decomposes offensive workflow into specialized summarizer, planner, and navigator agents, handling complex post-breach scenarios. & Evaluations belong to traditional network boundaries, omitting Kubernetes privilege primitives (e.g., ServiceAccounts, ConfigMaps, cluster RBAC). \\
+\addlinespace
+\textbf{Happe \& Cito, 2023} \cite{happe2023llms} & Quantitative (Priv-esc scenarios) & Evaluates ability of LLMs to autonomously perform Linux privilege escalation, benchmarking performance across varying scenario complexities. & Does not address the distributed nature of cloud-native clusters where priv-esc frequently involves network pivoting and lateral movement across nodes. \\
+\addlinespace
+\textbf{Chen et al., 2024} \cite{chen2024pentestagent} & Hybrid (Multi-agent system) & Utilizes distinct agents for reconnaissance, exploitation, and reporting to improve state retention during long-running tasks. & Primarily targets standard enterprise infrastructure. Lacks a Kubernetes-specific assumed-breach execution model. \\
+\addlinespace
+\textbf{Happe et al., 2025} \cite{happe2025benchmarking} & Survey and Meta-analysis & Systematically surveys benchmarking practices in LLM-driven offensive security, highlighting a severe lack of reproducibility across platforms. & Survey highlights a gap that \emph{Chain Reaction} targets by utilizing a standardized baseline environment (Kubernetes Goat). \\
+\addlinespace
+\textbf{Isamu et al., 2024} \cite{isamu2024towards} & Hybrid (Benchmark Design) & Introduces a standardized benchmark for evaluating LLM penetration testing tools across enumeration and exploitation phases. & Emphasizes the need for reproducible environments across different computing architectures, including cloud-native. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\subsection{Theme 2: Attack Graph Modeling and Generation}
+Attack graphs represent the foundational data structures used to model potential lateral movement and privilege escalation paths. While the algorithmic generation of attack graphs is well-established, translating these models into dynamic, cloud-native environments exposes significant limitations. The core issue remains that the edges within these attack graphs are entirely theoretical. Defensive measures such as ambient network policies, admission controllers, or missing kernel capabilities frequently silently block paths that appear viable on paper. Fundamentally, these works lack an execution engine to validate whether a path is actually executable from a compromised Pod footprint. Table \ref{tab:litmatrix-theme2} outlines these foundational models.
+
+\begin{table*}[t!]
+\centering
+\caption{Theme 2: Attack Graph Modeling, Generation, and Analysis}
+\label{tab:litmatrix-theme2}
+\scriptsize
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{l p{2.5cm} X X}
+\toprule
+\textbf{Author \& Year} & \textbf{Method} & \textbf{Key Findings} & \textbf{Gap vs. Proposal} \\
+\midrule
+\textbf{Ou et al., 2006} \cite{ou2006scalable} & Algorithmic Logic Programming & Highly scalable attack-graph generation leveraging Datalog-based logical reasoning over configuration data. Established precedent for integrating empirical vulnerabilities with static configs. & Pre-dates modern Kubernetes container-native environments. Edges are completely theoretical without runtime validation. \\
+\addlinespace
+\textbf{Ibrahim et al., 2022} \cite{ibrahim2022strategies} & Survey and Hybrid Framework & Advanced strategies for building analysis-driven, modular attack graphs capable of scaling by separating topology, vulnerability, and analysis layers. & Focuses on general enterprise networks. Graph components remain analytical without live execution engine or proof actions. \\
+\addlinespace
+\textbf{Bernieri et al., 2023} \cite{bernieri2023scalable} & Modular Framework Design & Provides an analysis-driven attack graph generation approach that scales effectively to large, complex enterprise environments. & Does not specifically address the transient, ephemeral nature of cloud-native and Kubernetes contexts. \\
+\addlinespace
+\textbf{Di Tizio et al., 2024} \cite{ditizio2024coral} & Logical Attack Graphs with incremental updates & Builds logical attack graphs specifically for container environments. Innovates by performing incremental updates to graph state as pods and containers churn. & Identifies what \emph{could} happen based on RBAC and Network state, but crucially lacks an execution engine to validate reachability. \\
+\addlinespace
+\textbf{Sultan et al., 2019} \cite{sultan2019generation} & Cloud Topology Retrieval & Researched dynamic attack graph updates in broader cloud provider infrastructures by mapping transient IaaS state changes. & Broader cloud infrastructure focus (IaaS) rather than Kubernetes application-level API resources and nuanced RBAC structures. \\
+\addlinespace
+\textbf{Sultan et al., 2024} \cite{sultan2024detecting} & Systematic Survey & Illustrates that the presence of a configuration path does not guarantee runtime reachability due to ambient network policies and missing capabilities. & A detection-focused survey whose findings reinforce the need for offensive tools to actively execute actions to validate paths. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\subsection{Theme 3: Container and Cloud-Native Threat Modeling}
+Accurate threat modeling is a prerequisite for executing context-aware validation. Research applying frameworks like STRIDE to containerized environments has cataloged threats across the image, runtime, orchestration, and networking layers. While these taxonomies effectively define the attack surface that offensive agents must interrogate, they remain purely analytical. They dictate what vectors exist but offer no methodology or framework for autonomously validating the presence of these vulnerabilities under live cluster constraints. Table \ref{tab:litmatrix-theme3} summarizes this area.
+
+\begin{table*}[t!]
+\centering
+\caption{Theme 3: Container and Cloud-Native Threat Modeling}
+\label{tab:litmatrix-theme3}
+\scriptsize
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{l p{2.5cm} X X}
+\toprule
+\textbf{Author \& Year} & \textbf{Method} & \textbf{Key Findings} & \textbf{Gap vs. Proposal} \\
+\midrule
+\textbf{Getahun et al., 2021} \cite{getahun2021security} & STRIDE Methodology and Attack Analysis & Thoroughly catalogs threats across image, runtime, orchestration, and networking layers. Provides definitive taxonomy of container-specific attack vectors. & Remains purely analytical. Dictates what vectors exist but offers no framework for autonomously validating them under live cluster constraints. \\
+\addlinespace
+\textbf{Lin et al., 2025} \cite{lin2025container} & Systematic Survey & Exhaustive analysis of over 200 container vulnerabilities across 47 exploit types, providing comprehensive categorization of security failures. & Functions as an analytical reference tool but is missing dynamic execution capabilities for in-cluster exploitation. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\subsection{Theme 4: Adversary Emulation and Breach Simulation Frameworks}
+Breach and Attack Simulation (BAS) tools and adversary emulation frameworks represent the closest architectural precedents to the goals of \emph{Chain Reaction}. Recent approaches tackle partially observable environments and use LLM planning to orchestrate techniques dynamically. However, evaluating these frameworks highlights profound operational disconnects. Current adversary emulation systems execute procedures but do not natively operate as a Kubernetes Pod leveraging real cluster credentials to produce auditable, evidence-backed step artifacts. Table \ref{tab:litmatrix-theme4} presents a comparison of simulation frameworks.
+
+\begin{table*}[t!]
+\centering
+\caption{Theme 4: Adversary Emulation and Breach Simulation}
+\label{tab:litmatrix-theme4}
+\scriptsize
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{l p{2.5cm} X X}
+\toprule
+\textbf{Author \& Year} & \textbf{Method} & \textbf{Key Findings} & \textbf{Gap vs. Proposal} \\
+\midrule
+\textbf{Miller et al., 2021} \cite{miller2021automated} & AI Planning combined with Caldera & Proposes AI planning approaches to handle partially observable environments, acknowledging red team agents must actively adapt to newly discovered cluster states. & Heavy reliance on OS-level agents. Lacks native mechanisms for Kubernetes-specific enumeration (e.g. ServiceAccount token extraction). \\
+\addlinespace
+\textbf{MS Research, 2021} \cite{microsoft2021cyberbattlesim} & Reinforcement Learning Simulation Framework & Provides an experimentation platform applying reinforcement learning to autonomous attacker agents modeling lateral movement. & Confined solely to simulated, abstract network environments rather than executing concrete logic against real production clusters. \\
+\addlinespace
+\textbf{Applebaum et al., 2022} \cite{applebaum2022characterizing} & Experimental Evaluation & Notes that while Mitre Caldera achieves impressive technique execution breadth, it relies heavily on Windows and Linux endpoints. & Does not natively operate as a Kubernetes Pod leveraging real cluster credentials to produce auditable step artifacts. \\
+\addlinespace
+\textbf{Lam et al., 2025} \cite{lam2025autonomous} & Multi-agent LLM guided by ATT\&CK & Utilizes LLMs to comprehensively emulate multi-stage adversaries based on the MITRE ATT\&CK framework, achieving broad coverage without strict playbooks. & Evaluates on traditional enterprise networking domains; lacks execution and reasoning models tailored specifically for Kubernetes assumed-breach models. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\subsection{Theme 5: Runtime Exploitability Validation}
+The ultimate goal of attack chain analysis is discerning theoretical risk from actual exploitability. Work combining automated discovery and probing stresses the necessity of an agent actively pinging its environment to confirm the reachability of subsequent nodes. Yet, the translation of this adaptive, runtime-sensitive probing into a live Kubernetes cluster---where proof actions must contend with authentic API responses, rate limits, and egress restrictions---remains largely unexplored, as presented in Table \ref{tab:litmatrix-theme5}.
+
+\begin{table*}[h!]
+\centering
+\caption{Theme 5: Runtime Exploitability Validation}
+\label{tab:litmatrix-theme5}
+\scriptsize
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{l p{2.5cm} X X}
+\toprule
+\textbf{Author \& Year} & \textbf{Method} & \textbf{Key Findings} & \textbf{Gap vs. Proposal} \\
+\midrule
+\textbf{Garcia et al., 2024} \cite{garcia2024deep} & Deep RL Agent Simulation & Demonstrates the utility of DRL for discovering cyber-attack paths under partial observability. Formalizes necessity of an agent actively probing its environment. & Research was confined to simulated network environments. Fails to confront authentic API responses, rate limits, and live cluster egress restrictions. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+\subsection{Competitive Landscape and Synthesis}
+While the commercial security landscape heavily favors defensive posture management (e.g., CNAPPs like Wiz and Orca), autonomous penetration testing platforms (e.g., Horizon3.ai's NodeZero and Pentera) bridge the gap by safely executing exploits and chaining misconfigurations. However, the evidence integrity guarantees, precise reasoning transparency, and hypothesis pruning logic of these commercial tools are proprietary and not documented to an academic standard.
+
+The synthesis reveals distinct unmet needs:
+\begin{enumerate}
+    \item \textbf{Lack of Kubernetes-Native LLM Agents:} No existing system specializes the plan-act-observe loop specifically for Kubernetes primitives operating from an in-cluster Pod identity.
+    \item \textbf{Theoretical Constraints of Attack Graphs:} Current models identify plausible attack vectors but lack the capability to execute bounded proof actions to validate edges.
+    \item \textbf{Absence of Evidence-Backed Output:} Existing tools fail to produce phase-labeled graphs paired with unalterable evidence bundles representing verified exploitability.
+\end{enumerate}
+
+\emph{Chain Reaction} addresses these gaps by shifting from theoretical vulnerability correlation to deterministic, LLM-guided runtime validation, substituting inferred reachability with explicit, artifact-backed, in-cluster execution.
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
 
 \end{document}
