@@ -1,66 +1,47 @@
+<p align="center">
+  <img src="docs/cover.png" alt="Chain Reaction Logo" width="120">
+</p>
+
 # Chain Reaction
 
-An autonomous, in-cluster Kubernetes agent that validates multi-step attack chains.
-
-We generate an evidence-backed, phase-labeled attack graph in which each node/edge is annotated with a phase (for example, recon, execution, privilege escalation) and supported by collected artifacts.
+An in-cluster Kubernetes agent that validates multi-step attack chains.
 
 ## Problem
 
-Static Kubernetes security scanners and attack-path modeling tools identify *possible* risks—but they rarely prove what is *actually exploitable* from an in-cluster foothold under real runtime constraints. Defenders are left with many plausible attack paths and limited evidence of which multi-step chains can actually be executed.
+Kubernetes security scanners find *possible* risks, but they don't prove what's *actually exploitable* from inside a compromised Pod. You get a list of theoretical attack paths without evidence of which ones work.
 
 ## Solution
 
-**Chain Reaction** is a Go-based agent that runs as a standard Kubernetes Pod with only its assigned ServiceAccount credentials and normal cluster networking. It autonomously discovers and validates multi-step attack chains spanning RBAC permissions, Secret access, network pivots, and workload takeovers.
-
-A chain step is **validated** only when the agent can execute it from within the Pod, capture supporting evidence (API responses, object snapshots, probe results), and explain why it succeeded or failed (RBAC denial, unreachable target, guardrail block, missing prerequisite).
+Chain Reaction runs as a standard Kubernetes Pod and tests attack chains for real. It validates each step by actually executing it, capturing evidence (API responses, object snapshots), and recording why steps succeed or fail.
 
 ## Key Features
 
-- **Assumed-breach execution model:** runs as a normal Pod with real cluster credentials and networking; no special node access or external secrets.
-- **Adaptive chaining:** uses an LLM-guided, tool-based loop to plan and reprioritize actions based on discovered objects, permissions, and runtime constraints.
-- **Safe proof actions:** controlled, read-only probes where possible; bounded-impact validation where necessary; explicit guardrails (allow-lists, rate limits, time budget, stop conditions).
-- **Evidence-backed output:** raw API responses, probe outputs, object snapshots, timestamps, and audit trails packaged into a reproducible evidence bundle.
-- **Phase-labeled attack graph:** nodes and edges typed by Kubernetes primitive (RBAC, Secret, Service, Pod, etc.) and annotated with a phase; edges explicitly labeled as validated or theoretical; each validated edge tied to step-level evidence.
-
-## Deliverables
-
-1. **Phase-labeled attack graph** (JSON + optional visual render): multi-step attack paths with validated vs theoretical edges, phase annotations per node/edge, and evidence references.
-2. **Evidence bundle**: step logs, API responses, object snapshots, timestamps, and a manifest for integrity verification.
-3. **Academic evaluation**: coverage on Kubernetes Goat scenarios, comparison against baselines (static scanners, attack-graph tools), and reproducibility analysis.
-
-## Goals
-
-- Validate at least 80% of Kubernetes Goat scenarios by producing a runtime-validated chain and evidence bundle per scenario.
-- Demonstrate reproducibility: repeat runs on the same lab should yield materially similar graphs and evidence.
-- Provide a fair baseline for comparing static scanners, attack-graph tools, and LLM-guided autonomous agents.
+- **Assumed-breach model:** Runs as a normal Pod with real ServiceAccount credentials
+- **Runtime validation:** Tests chains instead of guessing from configuration
+- **Safe execution:** Read-only probes, rate limits, time budgets, allow-lists
+- **Evidence-backed:** Raw API responses, timestamps, and object snapshots
+- **Attack graph output:** Phase-labeled graph with validated vs theoretical edges
 
 ## Documentation
 
-- [Kubernetes background & exploits](docs/k8s-background-research.md): overview of Kubernetes primitives as attack surfaces and real CVE examples.
-- [Literature review](docs/literature-review.md): related work and research gaps.
-- [Similar projects & tools](docs/similar-projects.md): comparison to existing tools and frameworks.
-- [Milestones & plan](docs/milestones.md): project execution plan with phases and issue definitions.
+- [Kubernetes background & exploits](docs/draft/k8s-background-research.md)
+- [Similar projects & tools](docs/draft/similar-projects.md)
+- [Abstract](docs/draft/abstract.md)
 
 ## Prerequisites
 
-- A Kubernetes cluster (local kind or minikube for development; Kubernetes Goat for evaluation).
-- Go 1.21+ (for building the agent).
-- kubectl configured to access the target cluster.
+- Kubernetes cluster (kind/minikube for dev, Kubernetes Goat for testing)
+- Go 1.21+
+- kubectl
 
 ## Quick Start
 
-(Coming soon—placeholder for CLI build, deployment, and lab setup instructions.)
+(Coming soon)
 
-## Safety & Guardrails
+## Safety
 
-Chain Reaction is designed for **controlled lab environments only**. All actions are bounded by:
-
-- Explicit allow-lists for target resources and namespaces.
-- Rate limiting and retry bounds to avoid cluster disruption.
-- A time budget and step limit to prevent runaway loops.
-- Read-only API operations where possible; write operations are opt-in and heavily constrained.
-- Logging and auditing of all actions for reproducibility and review.
+**For lab environments only.** Actions are bounded by allow-lists, rate limits, and time budgets.
 
 ## License
 
-[MIT](LICENSE)
+[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.en)
