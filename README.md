@@ -31,12 +31,26 @@ Chain Reaction runs as a standard Kubernetes Pod and tests attack chains for rea
 ## Prerequisites
 
 - Kubernetes cluster (kind/minikube for dev, Kubernetes Goat for testing)
-- Go 1.21+
+- Go 1.25+
 - kubectl
 
 ## Quick Start
 
-(Coming soon)
+```bash
+make tidy
+make build
+./bin/chain-reaction version
+./bin/chain-reaction scan --output artifacts --time-budget 2m
+```
+
+To run inside Kubernetes with the provided manifests:
+
+```bash
+kubectl apply -f deploy/namespace.yaml
+kubectl apply -f deploy/serviceaccount.yaml
+kubectl apply -f deploy/rbac.yaml
+kubectl apply -f deploy/job.yaml
+```
 
 ## Safety
 
