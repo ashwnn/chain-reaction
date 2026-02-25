@@ -1,0 +1,11 @@
+namespace: ""
+kubeconfig: ""
+output: artifacts
+format: json
+time_budget: 10m
+max_steps: 20
+allow_namespaces: []
+k8s_qps: 20
+k8s_burst: 30
+openai_model: gpt-5-mini
+openai_api_key: ""

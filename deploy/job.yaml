@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: chain-reaction-scan
+  namespace: chain-reaction
+spec:
+  template:
+    spec:
+      serviceAccountName: chain-reaction
+      restartPolicy: Never
+      containers:
+        - name: chain-reaction
+          image: ghcr.io/ashwnn/chain-reaction:dev
+          args:
+            - "scan"
+            - "--output"
+            - "/tmp/artifacts"
+            - "--time-budget"
+            - "5m"
+  backoffLimit: 0
