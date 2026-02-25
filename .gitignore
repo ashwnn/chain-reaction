@@ -2,3 +2,5 @@
 .DS_Store
 bin/
 artifacts/
+.vscode
+AGENTS.md
