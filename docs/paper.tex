@@ -44,6 +44,24 @@ The primary output is an evidence-backed, phase-labeled attack graph in which ea
 Kubernetes, assumed breach, attack-chain validation, RBAC, evidence logging
 \end{IEEEkeywords}
 
+\section{Introduction}
+
+\subsection{Background and Motivation}
+Kubernetes has become the dominant platform for orchestrating containerized workloads across cloud-native environments. As adoption grows, so does the attack surface: identity-based access through Role-Based Access Control (RBAC), ephemeral workloads, service-to-service networking, and layered security policies all create complex conditions that traditional vulnerability scanners struggle to evaluate. Existing cloud-native security tools focus heavily on static configuration analysis and posture management, producing lists of theoretical attack paths that may or may not be exploitable under actual runtime constraints.
+
+The gap between what \emph{could} happen and what \emph{does} happen when an attacker already has a foothold inside a cluster is significant. Runtime controls such as NetworkPolicies, admission controllers, and restricted Linux capabilities can silently block steps that appear viable on paper. Without a mechanism that tests each step from within the cluster, defenders are left prioritizing risk based on unverified assumptions.
+
+\subsection{Problem Statement}
+Current approaches to Kubernetes attack-path analysis identify plausible multi-step chains but do not validate whether those chains are actually executable from an in-cluster identity. Theoretical attack graphs lack runtime evidence, and no existing open-source tool operates from an assumed-breach pod to confirm step-by-step exploitability using bounded, safe probes with auditable artifact collection.
+
+\subsection{Research Questions}
+This project is guided by the following research questions:
+\begin{enumerate}
+    \item \textbf{RQ1:} Can an LLM-guided, tool-calling agent running inside a Kubernetes pod validate multi-step attack chains by executing bounded proof actions against real cluster state?
+    \item \textbf{RQ2:} What fraction of theoretically modeled attack paths in a controlled Kubernetes environment (Kubernetes Goat) can be confirmed as runtime-validated chains?
+    \item \textbf{RQ3:} How do guardrail mechanisms (allow-lists, rate limits, time budgets, stop conditions) affect the balance between exploration coverage and operational safety?
+\end{enumerate}
+
 \section{Literature Review}
 
 Cloud-native security research has changed a lot in the last few years. Instead of only listing possible vulnerabilities, newer work is moving toward tools that can actively test whether an attack is doable in a real environment. This shift matters because Kubernetes clusters are complex: traditional network boundaries are less important, access is mostly controlled through identity, role-based access control (RBAC), and container permissions, and an attack path that looks possible on paper often requires multiple steps. In practice, these chains can fail because of runtime controls such as NetworkPolicies, admission controllers, or missing Linux capabilities.
@@ -186,6 +204,132 @@ Across the five themes, three gaps show up consistently:
 \end{enumerate}
 
 \emph{Chain Reaction} is designed to address these gaps by moving from theoretical correlation to runtime validation. Instead of assuming a path is reachable, it executes Kubernetes-native steps from an assumed-breach pod and produces artifacts that document what was verified inside the cluster.
+
+\section{Project Approach and Methodology}
+
+\subsection{Overview}
+Chain Reaction follows an experimental, execution-based methodology. The system is a Go-based agent deployed as a standard Kubernetes Pod that uses an LLM-guided, tool-calling loop to enumerate cluster objects, test reachability, and validate attack-chain steps incrementally. The agent operates exclusively with its assigned ServiceAccount credentials and ordinary cluster networking, assuming no node-level access and no out-of-band secrets. The project proceeds through four phases.
+
+\subsection{Phase 1: Environment Setup and Baseline}
+The evaluation environment is Kubernetes Goat \cite{kubegoat2023}, a deliberately vulnerable Kubernetes cluster that provides a standardized set of misconfigurations and exploitable scenarios. Kubernetes Goat is deployed on a local kind cluster running Kubernetes 1.30. Before any agent runs, each scenario is manually catalogued to establish a ground-truth inventory of expected attack chains and their constituent steps. This catalogue serves as the baseline for measuring scenario coverage.
+
+\subsection{Phase 2: Agent Architecture and Tool Implementation}
+The agent is structured around a plan-act-observe loop. In each iteration the LLM receives the current cluster context (discovered objects, effective permissions, prior step outcomes) and selects from a fixed tool set. The core tools include:
+\begin{itemize}
+    \item \textbf{Kubernetes API Prober} - enumerates namespaces, pods, services, secrets, configmaps, roles, and bindings using \texttt{client-go}.
+    \item \textbf{RBAC Analyzer} - resolves effective permissions for the agent's ServiceAccount through \texttt{SelfSubjectAccessReview} and \texttt{SelfSubjectRulesReview} requests.
+    \item \textbf{Network Reachability Checker} - tests TCP/HTTP connectivity to discovered service endpoints, the Kubernetes API server, and the kubelet from within the pod.
+    \item \textbf{Secret Reader} - attempts retrieval of secret objects to confirm whether RBAC allows access.
+    \item \textbf{Token Projector} - inspects mounted ServiceAccount tokens and tests their scope via API authentication checks.
+\end{itemize}
+
+All tools are read-only or minimally invasive. No tool creates, modifies, or deletes cluster resources. Safety guardrails constrain the agent's behavior: an allow-list restricts which namespaces and resource types are in scope, a per-step rate limiter caps API requests, a global time budget terminates the run after a configurable duration (default: 5 minutes), and stop conditions halt execution if the agent attempts disallowed actions.
+
+\subsection{Phase 3: Chain Execution and Evidence Collection}
+The agent attempts to walk each attack chain step by step. A step is considered \emph{validated} only when the agent can execute the corresponding probe from within the pod and capture a supporting artifact (such as a raw API response body, a TCP handshake result, a decoded secret value, or a permission check output). Steps that cannot be executed are classified with a failure reason: RBAC denial, unreachable network target, missing prerequisite, or guardrail enforcement.
+
+The primary output is a phase-labeled attack graph in which each node represents a cluster object or identity and each edge represents a validated or theoretical transition. Edges are annotated with the execution status and linked to an evidence bundle containing timestamped API responses, probe outputs, and object snapshots.
+
+\subsection{Phase 4: Evaluation and Analysis}
+The agent is executed across all Kubernetes Goat scenarios. Each run produces a graph and evidence bundle. Metrics are collected automatically and aggregated across repeated runs. The evaluation compares the agent's validated graph against the manually established baseline and against a static analysis pass that enumerates theoretical paths without runtime execution.
+
+\section{Measurement Models and Metrics}
+
+The evaluation uses four primary metrics:
+
+\begin{enumerate}
+    \item \textbf{Scenario Coverage (SC):} The fraction of Kubernetes Goat scenarios for which the agent validates at least one complete attack chain. The target is $\text{SC} \geq 0.80$.
+    \begin{equation}
+        \text{SC} = \frac{|\{\text{scenarios with} \geq 1 \text{ validated chain}\}|}{|\{\text{total scenarios}\}|}
+    \end{equation}
+
+    \item \textbf{Step Validation Rate (SVR):} The fraction of theoretical chain steps (from the baseline) that the agent confirms as executable at runtime.
+    \begin{equation}
+        \text{SVR} = \frac{|\{\text{validated steps}\}|}{|\{\text{theoretical steps in baseline}\}|}
+    \end{equation}
+
+    \item \textbf{Time-to-Chain (TTC):} Wall-clock time in seconds from agent start to the first fully validated chain in a given scenario.
+
+    \item \textbf{API Call Volume (ACV):} Total number of Kubernetes API requests the agent issues per scenario run, used to assess efficiency and cost.
+\end{enumerate}
+
+Two secondary metrics supplement the primary set:
+\begin{itemize}
+    \item \textbf{Run-to-Run Stability:} The coefficient of variation of SC and SVR across five repeated runs per scenario, measuring the consistency of LLM-guided exploration.
+    \item \textbf{Guardrail Trigger Rate:} The fraction of runs in which at least one guardrail (rate limit, time budget, allow-list block) was activated, indicating whether safety constraints meaningfully bound the agent's behavior.
+\end{itemize}
+
+\section{Statistical and Research Methods}
+
+For each scenario, the agent is executed five times to account for nondeterminism introduced by the LLM's sampling process. Descriptive statistics (mean, standard deviation, coefficient of variation) are computed for SC, SVR, TTC, and ACV across runs.
+
+To assess whether the agent's validated coverage significantly exceeds what static analysis alone produces, a paired Wilcoxon signed-rank test is applied to the per-scenario SVR values for the agent versus the static baseline. This non-parametric test is appropriate given the small sample sizes per scenario and the ordinal nature of step-level validation outcomes. The significance threshold is set at $\alpha = 0.05$.
+
+Correlation analysis (Spearman's rank correlation) is used to examine the relationship between ACV and SVR, testing whether higher API call volume translates to higher validation rates or instead reflects inefficient exploration. Additional analysis examines whether TTC correlates with chain length (number of steps in the baseline chain), which would indicate predictable scaling behavior.
+
+\section{Data Sources and Data Collection}
+
+\subsection{Test Environment}
+The primary data source is Kubernetes Goat, an open-source, intentionally vulnerable Kubernetes deployment. It provides a reproducible set of misconfigured scenarios spanning RBAC over-provisioning, exposed secrets, container escapes, and network-level weaknesses. The cluster runs on kind (Kubernetes IN Docker) version 0.20+ with Kubernetes 1.30 on a single-node configuration to ensure consistent state across runs.
+
+\subsection{Data Collected Per Run}
+Each agent run produces the following data artifacts:
+\begin{itemize}
+    \item \textbf{Attack graph:} A JSON-serialized directed graph where nodes are cluster objects or identities and edges carry validation status, phase labels, and evidence references.
+    \item \textbf{Evidence bundle:} A directory of timestamped files including raw API responses (JSON), TCP probe results, decoded secret values (redacted where appropriate), RBAC check outputs, and object snapshots.
+    \item \textbf{Run log:} A structured log (JSON Lines format) recording each LLM prompt, tool invocation, tool response, decision rationale, and guardrail trigger event with timestamps.
+    \item \textbf{Metric summary:} A JSON file recording SC, SVR, TTC, ACV, and guardrail events for the run.
+\end{itemize}
+
+\subsection{Volume and Sampling}
+Given $N$ scenarios in Kubernetes Goat and 5 runs per scenario, the total dataset comprises $5N$ independent runs. No sampling is applied; all scenarios are included. The manual baseline catalogue is constructed once and frozen before agent evaluation begins.
+
+\section{Data Analysis Techniques}
+
+\subsection{Tools and Software}
+Data analysis is performed using Python 3.12 with the following libraries: \texttt{pandas} for tabular aggregation of per-run metrics, \texttt{scipy.stats} for hypothesis testing (Wilcoxon signed-rank, Spearman correlation), \texttt{matplotlib} and \texttt{seaborn} for visualization, and \texttt{networkx} for graph-level analysis of the attack graphs.
+
+\subsection{Analysis Pipeline}
+The analysis proceeds in three stages:
+\begin{enumerate}
+    \item \textbf{Metric extraction:} Run logs and metric summaries are parsed into a unified dataframe indexed by scenario and run number. Attack graphs are loaded into \texttt{networkx} for structural analysis (node count, edge count, connected components, validated-edge fraction).
+    \item \textbf{Descriptive analysis:} Per-scenario distributions of SC, SVR, TTC, and ACV are computed and visualized through box plots and bar charts. Heatmaps display per-scenario step validation outcomes across runs.
+    \item \textbf{Comparative analysis:} The agent's SVR is compared to the static baseline SVR using a paired Wilcoxon signed-rank test. Spearman correlation tests examine ACV-SVR and TTC-chain-length relationships. Results are reported with effect sizes and confidence intervals where applicable.
+\end{enumerate}
+
+\section{Validation and Evaluation Plan}
+
+\subsection{Internal Validity}
+To control for LLM nondeterminism, each scenario is run five times and results are reported as distributions rather than single values. The time budget and rate limiter ensure that outlier runs (caused by LLM loops or excessive retries) terminate predictably. The manually constructed baseline provides a fixed reference independent of the agent.
+
+\subsection{External Validity}
+Kubernetes Goat is a controlled environment and does not fully represent production clusters. Results should be interpreted as a demonstration of capability within a standardized testbed rather than a claim of general production coverage. The agent's architecture is designed to generalize: tool definitions and allow-lists can be reconfigured for other environments.
+
+\subsection{Baselines and Comparisons}
+Two baselines are used for comparison:
+\begin{enumerate}
+    \item \textbf{Theoretical static analysis:} A configuration-only pass that enumerates all attack paths reachable from the agent's ServiceAccount based on RBAC bindings and network policy definitions, without executing any probes. This represents the current state of the art in attack-graph modeling.
+    \item \textbf{In-pod discovery scan:} A single-pass enumeration that queries the Kubernetes API for accessible objects but does not chain steps together or test multi-step reachability. This represents basic in-cluster reconnaissance.
+\end{enumerate}
+
+The key evaluation question is how many of the theoretical paths survive runtime validation, and whether chained execution reveals paths or blockers that neither baseline can detect.
+
+\subsection{Reproducibility}
+All code, configuration files, deployment manifests, and evaluation scripts are published in the project repository. The Kubernetes Goat environment is deployed from its public Helm chart at a pinned version to ensure reproducibility. Agent configuration (LLM model, temperature, tool definitions, guardrail parameters) is stored in a version-controlled YAML file.
+
+\section{Expected Results}
+
+The anticipated outcomes of this project are as follows.
+
+First, Chain Reaction is expected to achieve a scenario coverage of at least 80\% across Kubernetes Goat scenarios, demonstrating that an in-cluster LLM-guided agent can validate the majority of known attack patterns. Chains involving RBAC over-provisioning and exposed secrets are expected to validate at high rates, while scenarios requiring kernel exploits or container escapes may fall below the validation threshold because the agent operates within standard pod constraints.
+
+Second, the step validation rate is expected to be substantially lower than 100\%, confirming the central hypothesis that many theoretically modeled paths fail at runtime due to NetworkPolicies, missing capabilities, or admission controller enforcement. The gap between theoretical and validated steps is itself a key finding, quantifying the degree to which static analysis overestimates exploitability.
+
+Third, time-to-chain is expected to correlate positively with chain length, with shorter chains (two to three steps) validating in under 60 seconds and longer chains (four or more steps) requiring the full time budget. API call volume is expected to scale roughly linearly with chain length for successful validations.
+
+Fourth, run-to-run stability is expected to show moderate variance (coefficient of variation between 0.10 and 0.30 for SVR), reflecting the inherent nondeterminism of LLM-guided exploration. If variance exceeds this range, it will indicate a need for more structured planning prompts or deterministic fallback strategies.
+
+Finally, the comparison against the static baseline and the discovery scan is expected to demonstrate that runtime validation adds information that neither passive method can provide: specifically, confirming which edges in the theoretical graph are truly traversable and identifying failure reasons for those that are not.
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}
