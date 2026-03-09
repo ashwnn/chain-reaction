@@ -53,7 +53,7 @@ Examples:
 
 Execution stops immediately when ANY condition is met:
 
-1. **Time budget exceeded** - Total runtime exceeds configured limit (default: 2 minutes)
+1. **Time budget exceeded** - Total runtime exceeds configured limit (default: 5 minutes)
 2. **Step count exceeded** - Maximum number of tool executions reached (default: 50)
 3. **Loop detected** - Repeated pattern of same tool with same inputs
 4. **Error threshold** - Consecutive errors exceed limit (default: 5)

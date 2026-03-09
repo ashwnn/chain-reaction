@@ -40,7 +40,7 @@ Chain Reaction runs as a standard Kubernetes Pod and tests attack chains for rea
 make tidy
 make build
 ./bin/chain-reaction version
-./bin/chain-reaction scan --output artifacts --time-budget 2m
+./bin/chain-reaction scan --output artifacts --time-budget 5m
 ```
 
 To run inside Kubernetes with the provided manifests:

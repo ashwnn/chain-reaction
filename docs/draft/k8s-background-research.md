@@ -271,10 +271,10 @@ Start a local cluster:
 
 ```sh
 # minikube
-minikube start --kubernetes-version=v1.29.3
+minikube start --kubernetes-version=v1.30.0
 
 # or kind
-kind create cluster --image kindest/node:v1.29.3
+kind create cluster --image kindest/node:v1.30.0
 ```
 
 Apply the lab:
