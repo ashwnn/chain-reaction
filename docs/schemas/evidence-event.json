@@ -1,0 +1,415 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/ashwnn/chain-reaction/schemas/evidence-event.json",
+  "title": "Evidence Event",
+  "description": "Schema for evidence events collected by Chain Reaction agent",
+  "type": "object",
+  "required": [
+    "evidence_id",
+    "timestamp",
+    "event_type",
+    "run_id",
+    "source",
+    "payload"
+  ],
+  "properties": {
+    "evidence_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for this evidence record"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp when event occurred"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "api_call",
+        "tool_execution",
+        "observation",
+        "validation_result",
+        "guardrail_triggered",
+        "llm_decision",
+        "state_change",
+        "evidence_export"
+      ],
+      "description": "Category of evidence event"
+    },
+    "run_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Scan/execution run identifier"
+    },
+    "parent_evidence_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Parent event for correlation (if applicable)"
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Distributed trace identifier for request flow"
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low", "info"],
+      "default": "info",
+      "description": "Severity level of the event"
+    },
+    "source": {
+      "type": "object",
+      "required": ["type", "name"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["kubernetes_api", "tool", "llm", "guardrail", "internal"],
+          "description": "Source category"
+        },
+        "name": {
+          "type": "string",
+          "description": "Tool name, API endpoint, or component"
+        },
+        "version": {
+          "type": "string",
+          "description": "Version of the source component"
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "description": "The resource being acted upon",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "examples": ["Pod", "ServiceAccount", "Secret", "Namespace"]
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object"
+        },
+        "annotations": {
+          "type": "object"
+        },
+        "uid": {
+          "type": "string",
+          "description": "Kubernetes UID"
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "description": "Execution context",
+      "properties": {
+        "cluster": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "pod_name": {
+          "type": "string"
+        },
+        "node_name": {
+          "type": "string"
+        },
+        "service_account": {
+          "type": "string"
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-specific data",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/APICallPayload"
+        },
+        {
+          "$ref": "#/definitions/ToolExecutionPayload"
+        },
+        {
+          "$ref": "#/definitions/ObservationPayload"
+        },
+        {
+          "$ref": "#/definitions/ValidationPayload"
+        },
+        {
+          "$ref": "#/definitions/GuardrailPayload"
+        },
+        {
+          "$ref": "#/definitions/LLMDecisionPayload"
+        }
+      ]
+    },
+    "integrity": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "type": "string",
+          "description": "SHA-256 hash of the evidence content"
+        },
+        "hash_algorithm": {
+          "type": "string",
+          "default": "sha256"
+        },
+        "chain_hash": {
+          "type": "string",
+          "description": "Hash linking to previous evidence for tamper detection"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "collected_by": {
+          "type": "string"
+        },
+        "collection_method": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string",
+          "default": "1.0.0"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "APICallPayload": {
+      "type": "object",
+      "required": ["method", "path", "response_status"],
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "LIST", "WATCH"]
+        },
+        "path": {
+          "type": "string",
+          "examples": ["/api/v1/namespaces", "/api/v1/pods"]
+        },
+        "request_headers": {
+          "type": "object"
+        },
+        "request_body": {},
+        "response_status": {
+          "type": "integer"
+        },
+        "response_body_hash": {
+          "type": "string"
+        },
+        "response_body_size": {
+          "type": "integer"
+        },
+        "latency_ms": {
+          "type": "integer"
+        },
+        "rbac_identity": {
+          "type": "object",
+          "properties": {
+            "user": {
+              "type": "string"
+            },
+            "groups": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "ToolExecutionPayload": {
+      "type": "object",
+      "required": ["tool_name"],
+      "properties": {
+        "tool_name": {
+          "type": "string"
+        },
+        "tool_version": {
+          "type": "string"
+        },
+        "input": {
+          "type": "object"
+        },
+        "output": {
+          "type": "object"
+        },
+        "execution_time_ms": {
+          "type": "integer"
+        },
+        "exit_code": {
+          "type": "integer"
+        },
+        "stderr": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "resources_accessed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "names": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ObservationPayload": {
+      "type": "object",
+      "required": ["observation_type", "description"],
+      "properties": {
+        "observation_type": {
+          "type": "string",
+          "examples": ["sensitive_data_detected", "privilege_escalation_path", "weak_configuration"]
+        },
+        "description": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "details": {
+          "type": "object"
+        },
+        "severity_indicators": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ValidationPayload": {
+      "type": "object",
+      "required": ["validation_type", "result"],
+      "properties": {
+        "validation_type": {
+          "type": "string",
+          "examples": ["attack_path_validation", "permission_validation", "network_reachability"]
+        },
+        "target_edge": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            }
+          }
+        },
+        "result": {
+          "type": "string",
+          "enum": ["validated", "theoretical", "failed"]
+        },
+        "validation_method": {
+          "type": "string",
+          "examples": ["api_verification", "runtime_execution", "configuration_analysis"]
+        },
+        "evidence_references": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "confidence_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "validation_details": {
+          "type": "object"
+        }
+      }
+    },
+    "GuardrailPayload": {
+      "type": "object",
+      "required": ["guardrail_type", "trigger"],
+      "properties": {
+        "guardrail_type": {
+          "type": "string",
+          "examples": ["namespace_allowlist", "rate_limit", "action_allowlist"]
+        },
+        "trigger": {
+          "type": "string",
+          "examples": ["access_denied", "rate_exceeded", "timeout"]
+        },
+        "requested_resource": {
+          "type": "object"
+        },
+        "policy_applied": {
+          "type": "object"
+        },
+        "action_taken": {
+          "type": "string",
+          "enum": ["blocked", "allowed", "throttled"]
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "LLMDecisionPayload": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "prompt_tokens": {
+          "type": "integer"
+        },
+        "completion_tokens": {
+          "type": "integer"
+        },
+        "decision": {
+          "type": "string",
+          "examples": ["suggest_next_tool", "validate_path", "terminate"]
+        },
+        "selected_tool": {
+          "type": "string"
+        },
+        "alternative_tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "reasoning": {
+          "type": "string"
+        },
+        "prompt_hash": {
+          "type": "string"
+        },
+        "response_hash": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,476 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/ashwnn/chain-reaction/schemas/attack-graph.json",
+  "title": "Attack Graph",
+  "description": "Schema for attack graph output from Chain Reaction agent",
+  "type": "object",
+  "required": [
+    "metadata",
+    "nodes",
+    "edges"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": [
+        "graph_id",
+        "created_at",
+        "run_id"
+      ],
+      "properties": {
+        "graph_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier for this graph"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the graph was generated"
+        },
+        "run_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Reference to the agent run"
+        },
+        "cluster": {
+          "type": "string",
+          "description": "Target Kubernetes cluster"
+        },
+        "namespace": {
+          "type": "string",
+          "description": "Primary namespace scanned"
+        },
+        "agent_version": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string",
+          "default": "1.0.0"
+        },
+        "statistics": {
+          "type": "object",
+          "properties": {
+            "node_count": {
+              "type": "integer"
+            },
+            "edge_count": {
+              "type": "integer"
+            },
+            "validated_edges": {
+              "type": "integer"
+            },
+            "theoretical_edges": {
+              "type": "integer"
+            },
+            "failed_edges": {
+              "type": "integer"
+            },
+            "attack_paths": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Node"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Edge"
+      }
+    },
+    "paths": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/AttackPath"
+      }
+    }
+  },
+  "definitions": {
+    "Node": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique node identifier"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "Pod",
+            "ServiceAccount",
+            "Secret",
+            "ConfigMap",
+            "Role",
+            "ClusterRole",
+            "RoleBinding",
+            "ClusterRoleBinding",
+            "Service",
+            "Endpoint",
+            "Node",
+            "Namespace",
+            "Deployment",
+            "StatefulSet",
+            "DaemonSet",
+            "Ingress",
+            "NetworkPolicy"
+          ],
+          "description": "Kubernetes resource kind"
+        },
+        "name": {
+          "type": "string",
+          "description": "Resource name"
+        },
+        "namespace": {
+          "type": "string",
+          "description": "Resource namespace (if namespaced)"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Kubernetes labels"
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Kubernetes annotations"
+        },
+        "uid": {
+          "type": "string",
+          "description": "Kubernetes UID"
+        },
+        "compromised": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this node represents attacker access"
+        },
+        "risk_level": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low", "none"],
+          "description": "Risk assessment"
+        },
+        "properties": {
+          "type": "object",
+          "description": "Kind-specific properties",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PodProperties"
+            },
+            {
+              "$ref": "#/definitions/ServiceAccountProperties"
+            },
+            {
+              "$ref": "#/definitions/SecretProperties"
+            },
+            {
+              "$ref": "#/definitions/RoleProperties"
+            },
+            {
+              "$ref": "#/definitions/GenericProperties"
+            }
+          ]
+        },
+        "discovery_evidence_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Reference to evidence of discovery"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When node was discovered"
+        }
+      }
+    },
+    "Edge": {
+      "type": "object",
+      "required": [
+        "id",
+        "source",
+        "target",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique edge identifier"
+        },
+        "source": {
+          "type": "string",
+          "description": "Source node ID"
+        },
+        "target": {
+          "type": "string",
+          "description": "Target node ID"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "MOUNTS",
+            "BINDS_TO",
+            "READS",
+            "WRITES",
+            "USES",
+            "ESCALATES_TO",
+            "REACHES",
+            "EXPOSES",
+            "REFERENCES",
+            "CONTROLS",
+            "OWNS",
+            "DEPENDS_ON",
+            "COMMUNICATES_WITH"
+          ],
+          "description": "Relationship type"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["validated", "theoretical", "failed"],
+          "description": "Validation status of this edge"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low", "info"],
+          "description": "Edge severity"
+        },
+        "evidence_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Reference to validation evidence"
+        },
+        "validation_details": {
+          "type": "object",
+          "properties": {
+            "method": {
+              "type": "string"
+            },
+            "timestamp": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "confidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "attempts": {
+              "type": "integer"
+            },
+            "error": {
+              "type": "string"
+            }
+          }
+        },
+        "properties": {
+          "type": "object",
+          "description": "Edge-specific properties"
+        },
+        "discovered_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "validated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "AttackPath": {
+      "type": "object",
+      "required": [
+        "id",
+        "nodes",
+        "edges"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique path identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable path name"
+        },
+        "description": {
+          "type": "string"
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ordered list of node IDs"
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ordered list of edge IDs"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["attack", "privilege_escalation", "lateral_movement", "data_exfiltration"]
+        },
+        "validated": {
+          "type": "boolean",
+          "description": "Whether entire path is validated"
+        },
+        "validation_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Percentage of edges validated"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"]
+        },
+        "start_node": {
+          "type": "string"
+        },
+        "end_node": {
+          "type": "string"
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "attack_phase": {
+          "type": "string",
+          "enum": ["initial_access", "discovery", "privilege_escalation", "lateral_movement", "impact"]
+        }
+      }
+    },
+    "PodProperties": {
+      "type": "object",
+      "properties": {
+        "serviceAccount": {
+          "type": "string"
+        },
+        "hostNetwork": {
+          "type": "boolean"
+        },
+        "hostPID": {
+          "type": "boolean"
+        },
+        "privileged": {
+          "type": "boolean"
+        },
+        "containers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "image": {
+                "type": "string"
+              },
+              "privileged": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "volumes": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "nodeName": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "ServiceAccountProperties": {
+      "type": "object",
+      "properties": {
+        "automountToken": {
+          "type": "boolean"
+        },
+        "secrets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "SecretProperties": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "data_keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of data keys (not values)"
+        }
+      }
+    },
+    "RoleProperties": {
+      "type": "object",
+      "properties": {
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "apiGroups": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "resources": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "verbs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "isClusterScoped": {
+          "type": "boolean"
+        }
+      }
+    },
+    "GenericProperties": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}
