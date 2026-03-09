@@ -39,11 +39,11 @@ func Default() Config {
 		Namespace:           "",
 		OutputPath:          "artifacts",
 		OutputFormat:        "json",
-		TimeBudget:          10 * time.Minute,
+		TimeBudget:          5 * time.Minute,
 		MaxSteps:            20,
 		AllowListNamespaces: nil,
-		QPS:                 20,
-		Burst:               30,
+		QPS:                 10,
+		Burst:               20,
 		OpenAIModel:         "gpt-5-mini",
 	}
 }
