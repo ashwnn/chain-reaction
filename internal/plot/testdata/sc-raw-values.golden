@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 460" width="720" height="460" role="img">
+  <style>
+    text { font-family: "Liberation Sans", "DejaVu Sans", "Nimbus Sans L", Helvetica, Arial, sans-serif; }
+    .title { font-size: 16px; font-weight: 700; fill: #1A1A1A; }
+    .subtitle { font-size: 11px; fill: #5C5C5C; }
+    .axis-label { font-size: 12px; font-weight: 600; fill: #333333; }
+    .tick-label { font-size: 11px; fill: #333333; }
+    .legend-text { font-size: 11px; fill: #333333; }
+    .caption { font-size: 10px; fill: #5C5C5C; }
+    .stat-value { font-size: 20px; font-weight: 700; fill: #1A1A1A; }
+    .stat-label { font-size: 10px; font-weight: 600; fill: #5C5C5C; letter-spacing: 0.04em; }
+    .interpretation { font-size: 11px; fill: #333333; }
+    .grid { stroke: #E4E6EA; stroke-width: 1; }
+    .axis { stroke: #333333; stroke-width: 1.2; }
+    .reference-line { stroke: #D55E00; stroke-width: 1.2; stroke-dasharray: 5,3; }
+    .reference-label { font-size: 10px; font-weight: 600; fill: #D55E00; }
+    .bar-label { font-size: 11px; font-weight: 600; fill: #1A1A1A; }
+    .on-bar { font-size: 11px; font-weight: 600; fill: #FFFFFF; }
+  </style>
+  <rect x="0.00" y="0.00" width="720.00" height="460.00" fill="#FFFFFF" stroke="none" stroke-width="0.0"/>
+  <text x="360.00" y="22.00" text-anchor="middle" dominant-baseline="middle" class="title">Scenario Coverage per Run</text>
+  <text x="360.00" y="38.00" text-anchor="middle" dominant-baseline="middle" class="subtitle">Each point is one independent validation run</text>
+  <circle cx="293.00" cy="72.00" r="4.50" fill="#0072B2" stroke="#333333" stroke-width="0.8"/>
+  <text x="304.00" y="72.00" text-anchor="start" dominant-baseline="middle" class="legend-text">≥ target</text>
+  <circle cx="385.00" cy="72.00" r="4.50" fill="#999999" stroke="#333333" stroke-width="0.8"/>
+  <text x="396.00" y="72.00" text-anchor="start" dominant-baseline="middle" class="legend-text">&lt; target</text>
+  <rect x="76.00" y="96.00" width="608.00" height="296.00" fill="#FBFCFD" stroke="#D7DCE2" stroke-width="1.0"/>
+  <text x="16.00" y="244.00" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90.0 16.00 244.00)" class="axis-label">Scenario coverage (SC)</text>
+  <text x="360.00" y="430.00" text-anchor="middle" dominant-baseline="middle" class="axis-label">Run</text>
+  <text x="360.00" y="448.00" text-anchor="middle" dominant-baseline="middle" class="caption">N = 5 runs  ·  solid line is the sample mean</text>
+  <line x1="76.00" y1="392.00" x2="684.00" y2="392.00" stroke="#E4E6EA" stroke-width="1.0" stroke-linecap="square"/>
+  <text x="68.00" y="392.00" text-anchor="end" dominant-baseline="middle" class="tick-label">0.00</text>
+  <line x1="76.00" y1="321.52" x2="684.00" y2="321.52" stroke="#E4E6EA" stroke-width="1.0" stroke-linecap="square"/>
+  <text x="68.00" y="321.52" text-anchor="end" dominant-baseline="middle" class="tick-label">0.25</text>
+  <line x1="76.00" y1="251.05" x2="684.00" y2="251.05" stroke="#E4E6EA" stroke-width="1.0" stroke-linecap="square"/>
+  <text x="68.00" y="251.05" text-anchor="end" dominant-baseline="middle" class="tick-label">0.50</text>
+  <line x1="76.00" y1="180.57" x2="684.00" y2="180.57" stroke="#E4E6EA" stroke-width="1.0" stroke-linecap="square"/>
+  <text x="68.00" y="180.57" text-anchor="end" dominant-baseline="middle" class="tick-label">0.75</text>
+  <line x1="76.00" y1="110.10" x2="684.00" y2="110.10" stroke="#E4E6EA" stroke-width="1.0" stroke-linecap="square"/>
+  <text x="68.00" y="110.10" text-anchor="end" dominant-baseline="middle" class="tick-label">1.00</text>
+  <line x1="76.00" y1="96.00" x2="76.00" y2="392.00" stroke="#333333" stroke-width="1.2" stroke-linecap="square"/>
+  <line x1="76.00" y1="392.00" x2="684.00" y2="392.00" stroke="#333333" stroke-width="1.2" stroke-linecap="square"/>
+  <line x1="76.00" y1="166.48" x2="684.00" y2="166.48" stroke="#D55E00" stroke-width="1.2" stroke-linecap="square" stroke-dasharray="5,3"/>
+  <text x="680.00" y="156.48" text-anchor="end" dominant-baseline="middle" class="reference-label">target (0.80)</text>
+  <line x1="76.00" y1="143.92" x2="684.00" y2="143.92" stroke="#009E73" stroke-width="1.6" stroke-linecap="square"/>
+  <text x="82.00" y="133.92" text-anchor="start" dominant-baseline="middle" class="reference-label">mean=0.88</text>
+  <circle cx="177.33" cy="166.48" r="5.50" fill="#0072B2" stroke="#004D7A" stroke-width="1.1"/>
+  <text x="177.33" y="408.00" text-anchor="middle" dominant-baseline="middle" class="tick-label">r01</text>
+  <circle cx="278.67" cy="110.10" r="5.50" fill="#0072B2" stroke="#004D7A" stroke-width="1.1"/>
+  <text x="278.67" y="408.00" text-anchor="middle" dominant-baseline="middle" class="tick-label">r02</text>
+  <circle cx="380.00" cy="110.10" r="5.50" fill="#0072B2" stroke="#004D7A" stroke-width="1.1"/>
+  <text x="380.00" y="408.00" text-anchor="middle" dominant-baseline="middle" class="tick-label">r03</text>
+  <circle cx="481.33" cy="166.48" r="5.50" fill="#0072B2" stroke="#004D7A" stroke-width="1.1"/>
+  <text x="481.33" y="408.00" text-anchor="middle" dominant-baseline="middle" class="tick-label">r04</text>
+  <circle cx="582.67" cy="166.48" r="5.50" fill="#0072B2" stroke="#004D7A" stroke-width="1.1"/>
+  <text x="582.67" y="408.00" text-anchor="middle" dominant-baseline="middle" class="tick-label">r05</text>
+</svg>
