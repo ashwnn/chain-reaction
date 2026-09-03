@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: chain-reaction-scan
+  namespace: chain-reaction
+  labels:
+    app.kubernetes.io/name: chain-reaction
+    app.kubernetes.io/version: scan
+    app.kubernetes.io/component: security-tool
+    app.kubernetes.io/part-of: chain-reaction
+    app.kubernetes.io/managed-by: kubectl
+    heritage: chain-reaction
+    chain-reaction.app/mode: scan
+spec:
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: chain-reaction
+        app.kubernetes.io/version: scan
+        app.kubernetes.io/component: security-tool
+        app.kubernetes.io/part-of: chain-reaction
+        heritage: chain-reaction
+        chain-reaction.app/mode: scan
+    spec:
+      serviceAccountName: chain-reaction
+      restartPolicy: Never
+      containers:
+        - name: chain-reaction
+          image: ghcr.io/ashwnn/chain-reaction:dev
+          args:
+            - "scan"
+            - "--output"
+            - "/tmp/artifacts"
+            - "--time-budget"
+            - "5m"
+  backoffLimit: 0

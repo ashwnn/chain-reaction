@@ -1,0 +1,20 @@
+namespace: ""
+kubeconfig: ""
+output: artifacts
+format: json
+debug: false
+time_budget: 5m
+max_steps: 20
+repeated_action_limit: 0
+allow_namespaces: []
+k8s_qps: 10
+k8s_burst: 20
+
+# Example only. The pinned evaluation settings live in `configs/evaluation.yaml`.
+llm_provider: openai
+planner_mode: blind
+llm_api_key: ""
+llm_base_url: ""
+llm_model: gpt-4o-mini
+llm_temperature: 0
+llm_max_tokens: 0

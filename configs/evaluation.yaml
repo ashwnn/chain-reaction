@@ -1,0 +1,31 @@
+# Version-controlled evaluation settings for reproducible validate runs.
+# Secrets stay out of the repository: provide OPENAI_API_KEY / ANTHROPIC_API_KEY /
+# GROQ_API_KEY in the environment, or override llm_api_key with a flag when
+# running in a controlled lab.
+
+namespace: ""
+kubeconfig: ""
+output: artifacts
+format: json
+debug: false
+time_budget: 5m
+max_steps: 20
+repeated_action_limit: 0
+allow_namespaces: []
+k8s_qps: 10
+k8s_burst: 20
+
+llm_provider: openai
+planner_mode: blind
+llm_api_key: ""
+llm_base_url: ""
+llm_model: gpt-4o-mini
+llm_temperature: 0
+llm_max_tokens: 0
+
+# Step-outcome evaluator is experimental and opt-in. The evaluator
+# makes an additional LLM call per validated step to classify the outcome.
+# Enable with --step-outcome-evaluator or by setting this to true in a
+# config override. When disabled, the validation loop falls back to raw
+# taxonomy classification (result/status field inspection) with no extra cost.
+step_outcome_evaluator: false

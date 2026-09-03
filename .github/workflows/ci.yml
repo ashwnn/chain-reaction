@@ -1,0 +1,154 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/ci.yml"
+      - "cmd/**"
+      - "internal/**"
+      - "scripts/**"
+      - "configs/**"
+      - "go.mod"
+      - "go.sum"
+      - "Makefile"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      run_race:
+        description: "Run the race detector"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - name: Detect changed components
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+            changed_files="$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD)"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            before="${{ github.event.before }}"
+            if [[ "$before" == "0000000000000000000000000000000000000000" ]]; then
+              changed_files="$(git ls-files)"
+            else
+              if ! git cat-file -e "${before}^{commit}" 2>/dev/null; then
+                git fetch --no-tags --depth=1 origin "${before}"
+              fi
+              changed_files="$(git diff --name-only "$before" "${{ github.sha }}")"
+            fi
+          else
+            changed_files="$(git ls-files)"
+          fi
+
+          printf 'Changed files:\n%s\n' "$changed_files"
+
+          if printf '%s\n' "$changed_files" | grep -Eq '^(cmd/|internal/|configs/|go\.mod$|go\.sum$|Makefile$)'; then
+            echo "run_go=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_go=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if printf '%s\n' "$changed_files" | grep -Eq '^(scripts/)'; then
+            echo "run_shell=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_shell=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if printf '%s\n' "$changed_files" | grep -Eq '^\.github/workflows/ci\.yml$'; then
+            echo "run_workflow=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_workflow=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate workflow YAML
+        if: steps.changes.outputs.run_workflow == 'true'
+        run: ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci.yml")'
+
+      - name: Set up Go
+        if: steps.changes.outputs.run_go == 'true'
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.26.1"
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Verify formatting
+        if: steps.changes.outputs.run_go == 'true'
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "${unformatted}" ]; then
+            echo "These files are not gofmt-formatted:"
+            echo "${unformatted}"
+            exit 1
+          fi
+
+      - name: Install ShellCheck
+        if: steps.changes.outputs.run_shell == 'true'
+        run: |
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y shellcheck
+          fi
+
+      - name: Lint shell scripts
+        if: steps.changes.outputs.run_shell == 'true'
+        run: shellcheck -x -e SC2034 scripts/*.sh
+
+      - name: Parse shell scripts
+        if: steps.changes.outputs.run_shell == 'true'
+        run: |
+          for script in scripts/*.sh; do
+            bash -n "${script}"
+          done
+
+      - name: Run unit tests
+        if: steps.changes.outputs.run_go == 'true'
+        run: go test ./...
+
+      - name: Run tests with race detector
+        if: steps.changes.outputs.run_go == 'true' && github.event_name == 'workflow_dispatch' && inputs.run_race
+        run: go test -race ./...
+
+      - name: Run go vet
+        if: steps.changes.outputs.run_go == 'true'
+        run: go vet ./...
+
+      - name: Build binary
+        if: steps.changes.outputs.run_go == 'true'
+        run: make build
+
+      - name: Smoke test CLI
+        if: steps.changes.outputs.run_go == 'true'
+        run: |
+          ./bin/chain-reaction version
+          ./bin/chain-reaction theory --output "${RUNNER_TEMP}/theory-artifacts"
+          test -f "${RUNNER_TEMP}/theory-artifacts/theoretical-baseline.json"
+
+      - name: No-op for non-runtime changes
+        if: steps.changes.outputs.run_go != 'true' && steps.changes.outputs.run_shell != 'true' && steps.changes.outputs.run_workflow != 'true'
+        run: echo "No code or script changes detected; skipping expensive verification."

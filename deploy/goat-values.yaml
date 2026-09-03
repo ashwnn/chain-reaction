@@ -1,0 +1,39 @@
+# Kubernetes Goat Deployment Configuration
+# ==========================================
+#
+# Pinned versions and deployment surface for reproducible evaluation.
+#
+# The upstream project (madhuakula/kubernetes-goat) deploys via raw
+# kubectl manifests rather than a Helm chart.  This file captures the
+# pinned deployment surface — repo, ref, and configurable parameters —
+# so the setup script can reproduce the environment deterministically.
+#
+# All version pins also live in scripts/goat-env-config.sh (the runtime
+# source of truth).  Edit that file to change versions; this file exists
+# for human readability and documentation.
+
+upstream:
+  repo: https://github.com/madhuakula/kubernetes-goat.git
+  # Researched pin (commit aa72b61). v2.3.0 fixes kubectl --short
+  # breakage on K8s 1.30+.
+  ref: "v2.3.0"
+
+environment:
+  cluster_name: chain-reaction-goat
+  cluster_type: kind
+  kind_version_min: "0.24.0"
+  kubernetes_version: "v1.30.4"
+  node_image_digest: "sha256:976ea815844d5fa93be213437e3ff5754cd599b040946b5cca43ca45c2047114"
+  topology: single-node
+
+namespaces:
+  # Chain Reaction agent namespace (deploy/ manifests)
+  agent: chain-reaction
+  # Goat scenarios deploy into the default namespace upstream.
+  # Individual scenarios may create additional namespaces.
+  goat_default: default
+
+# Scenario coverage is defined in built-in catalog
+# as in-scope scenario families KG-001 through KG-005.
+#
+# Upstream scenario IDs are mapped in built-in catalog

@@ -1,0 +1,80 @@
+# validate-job.yaml — Kubernetes Job manifest for `chain-reaction validate`.
+#
+# This file is a template processed by envsubst at apply time.
+# All ${VARIABLE} references are substituted from the environment
+# by run-validate-in-cluster.sh before kubectl apply.
+#
+# Required environment variables (set by run-validate-in-cluster.sh):
+#   CHAIN_REACTION_IMAGE  — container image reference
+#   JOB_NAME              — Kubernetes Job name
+#   NAMESPACE             — target namespace
+#   API_ENV_NAME          — secret key name (e.g. OPENAI_API_KEY)
+#   SECRET_NAME           — Kubernetes Secret name carrying the API key
+#   REMOTE_OUTPUT         — remote output directory in the pod
+#   REMOTE_STDOUT         — path where the validate command writes its stdout
+#   REMOTE_EXITCODE       — path where the wrapper writes the exit code
+#   REMOTE_DONE           — marker file signaling validate completion
+#   REMOTE_RELEASE        — marker file signaling artifact copy is done
+#   VALIDATE_CMD          — the full chain-reaction validate command line
+#
+# Usage (internal — do not apply directly):
+#   envsubst < deploy/validate-job.yaml | kubectl apply -f -
+#
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ${JOB_NAME}
+  namespace: ${NAMESPACE}
+  labels:
+    app.kubernetes.io/name: chain-reaction
+    app.kubernetes.io/version: validate
+    app.kubernetes.io/component: security-tool
+    app.kubernetes.io/part-of: chain-reaction
+    app.kubernetes.io/managed-by: kubectl
+    heritage: chain-reaction
+    chain-reaction.app/mode: validate
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: chain-reaction
+        app.kubernetes.io/version: validate
+        app.kubernetes.io/component: security-tool
+        app.kubernetes.io/part-of: chain-reaction
+        heritage: chain-reaction
+        chain-reaction.app/mode: validate
+    spec:
+      serviceAccountName: chain-reaction
+      restartPolicy: Never
+      containers:
+        - name: chain-reaction
+          image: ${CHAIN_REACTION_IMAGE}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ${API_ENV_NAME}
+              valueFrom:
+                secretKeyRef:
+                  name: ${SECRET_NAME}
+                  key: ${API_ENV_NAME}
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - |
+              set +e
+              : > "${REMOTE_STDOUT}"
+              ${VALIDATE_CMD} > "${REMOTE_STDOUT}" 2>&1 &
+              validate_pid=$!
+              tail -n +1 -f "${REMOTE_STDOUT}" &
+              tail_pid=$!
+              wait "${validate_pid}"
+              status=$?
+              kill "${tail_pid}" >/dev/null 2>&1 || true
+              wait "${tail_pid}" >/dev/null 2>&1 || true
+              printf "%s" "${status}" > "${REMOTE_EXITCODE}"
+              touch "${REMOTE_DONE}"
+              while [ ! -f "${REMOTE_RELEASE}" ]; do
+                sleep 1
+              done
+              exit "${status}"
