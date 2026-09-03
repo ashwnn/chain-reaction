@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 460" width="720" height="460" role="img">
+  <style>
+    text { font-family: "Liberation Sans", "DejaVu Sans", "Nimbus Sans L", Helvetica, Arial, sans-serif; }
+    .title { font-size: 16px; font-weight: 700; fill: #1A1A1A; }
+    .subtitle { font-size: 11px; fill: #5C5C5C; }
+    .axis-label { font-size: 12px; font-weight: 600; fill: #333333; }
+    .tick-label { font-size: 11px; fill: #333333; }
+    .legend-text { font-size: 11px; fill: #333333; }
+    .caption { font-size: 10px; fill: #5C5C5C; }
+    .stat-value { font-size: 20px; font-weight: 700; fill: #1A1A1A; }
+    .stat-label { font-size: 10px; font-weight: 600; fill: #5C5C5C; letter-spacing: 0.04em; }
+    .interpretation { font-size: 11px; fill: #333333; }
+    .grid { stroke: #E4E6EA; stroke-width: 1; }
+    .axis { stroke: #333333; stroke-width: 1.2; }
+    .reference-line { stroke: #D55E00; stroke-width: 1.2; stroke-dasharray: 5,3; }
+    .reference-label { font-size: 10px; font-weight: 600; fill: #D55E00; }
+    .bar-label { font-size: 11px; font-weight: 600; fill: #1A1A1A; }
+    .on-bar { font-size: 11px; font-weight: 600; fill: #FFFFFF; }
+  </style>
+  <rect x="0.00" y="0.00" width="720.00" height="460.00" fill="#FFFFFF" stroke="none" stroke-width="0.0"/>
+  <text x="360.00" y="22.00" text-anchor="middle" dominant-baseline="middle" class="title">Coverage Distributions</text>
+  <text x="360.00" y="38.00" text-anchor="middle" dominant-baseline="middle" class="subtitle">Tukey box plots (median, IQR, 1.5×IQR whiskers)</text>
+  <rect x="288.00" y="67.00" width="10.00" height="10.00" rx="1.50" fill="#0072B2" stroke="none" stroke-width="0.0"/>
+  <text x="304.00" y="72.00" text-anchor="start" dominant-baseline="middle" class="legend-text">SC</text>
+  <rect x="380.00" y="67.00" width="10.00" height="10.00" rx="1.50" fill="#009E73" stroke="none" stroke-width="0.0"/>
+  <text x="396.00" y="72.00" text-anchor="start" dominant-baseline="middle" class="legend-text">Catalog</text>
+  <rect x="76.00" y="96.00" width="608.00" height="296.00" fill="#FBFCFD" stroke="#D7DCE2" stroke-width="1.0"/>
+  <text x="16.00" y="244.00" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90.0 16.00 244.00)" class="axis-label">Rate</text>
+  <text x="360.00" y="430.00" text-anchor="middle" dominant-baseline="middle" class="axis-label">Metric</text>
+  <text x="360.00" y="448.00" text-anchor="middle" dominant-baseline="middle" class="caption">N = 5 runs  ·  dashed line is the paper target (SC ≥ 0.80)</text>
+  <line x1="76.00" y1="392.00" x2="684.00" y2="392.00" stroke="#E4E6EA" stroke-width="1.0" stroke-linecap="square"/>
+  <text x="68.00" y="392.00" text-anchor="end" dominant-baseline="middle" class="tick-label">0.00</text>
+  <line x1="76.00" y1="321.52" x2="684.00" y2="321.52" stroke="#E4E6EA" stroke-width="1.0" stroke-linecap="square"/>
+  <text x="68.00" y="321.52" text-anchor="end" dominant-baseline="middle" class="tick-label">0.25</text>
+  <line x1="76.00" y1="251.05" x2="684.00" y2="251.05" stroke="#E4E6EA" stroke-width="1.0" stroke-linecap="square"/>
+  <text x="68.00" y="251.05" text-anchor="end" dominant-baseline="middle" class="tick-label">0.50</text>
+  <line x1="76.00" y1="180.57" x2="684.00" y2="180.57" stroke="#E4E6EA" stroke-width="1.0" stroke-linecap="square"/>
+  <text x="68.00" y="180.57" text-anchor="end" dominant-baseline="middle" class="tick-label">0.75</text>
+  <line x1="76.00" y1="110.10" x2="684.00" y2="110.10" stroke="#E4E6EA" stroke-width="1.0" stroke-linecap="square"/>
+  <text x="68.00" y="110.10" text-anchor="end" dominant-baseline="middle" class="tick-label">1.00</text>
+  <line x1="76.00" y1="96.00" x2="76.00" y2="392.00" stroke="#333333" stroke-width="1.2" stroke-linecap="square"/>
+  <line x1="76.00" y1="392.00" x2="684.00" y2="392.00" stroke="#333333" stroke-width="1.2" stroke-linecap="square"/>
+  <line x1="76.00" y1="166.48" x2="684.00" y2="166.48" stroke="#D55E00" stroke-width="1.2" stroke-linecap="square" stroke-dasharray="5,3"/>
+  <text x="680.00" y="156.48" text-anchor="end" dominant-baseline="middle" class="reference-label">target (0.80)</text>
+  <line x1="278.67" y1="110.10" x2="278.67" y2="110.10" stroke="#333333" stroke-width="1.2" stroke-linecap="square"/>
+  <line x1="278.67" y1="110.10" x2="278.67" y2="110.10" stroke="#333333" stroke-width="1.2" stroke-linecap="square"/>
+  <line x1="251.71" y1="110.10" x2="305.62" y2="110.10" stroke="#333333" stroke-width="1.2" stroke-linecap="square"/>
+  <line x1="251.71" y1="110.10" x2="305.62" y2="110.10" stroke="#333333" stroke-width="1.2" stroke-linecap="square"/>
+  <rect x="240.16" y="110.10" width="77.01" height="2.00" rx="2.00" fill="#0072B2" stroke="#333333" stroke-width="1.1"/>
+  <line x1="240.16" y1="110.10" x2="317.17" y2="110.10" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="square"/>
+  <line x1="240.16" y1="110.10" x2="317.17" y2="110.10" stroke="#333333" stroke-width="1.4" stroke-linecap="square"/>
+  <circle cx="261.34" cy="110.10" r="3.00" fill="#FFFFFF" stroke="#333333" stroke-width="1.1"/>
+  <circle cx="270.00" cy="110.10" r="3.00" fill="#FFFFFF" stroke="#333333" stroke-width="1.1"/>
+  <circle cx="278.67" cy="110.10" r="3.00" fill="#FFFFFF" stroke="#333333" stroke-width="1.1"/>
+  <circle cx="287.33" cy="110.10" r="3.00" fill="#FFFFFF" stroke="#333333" stroke-width="1.1"/>
+  <circle cx="295.99" cy="110.10" r="3.00" fill="#FFFFFF" stroke="#333333" stroke-width="1.1"/>
+  <text x="278.67" y="408.00" text-anchor="middle" dominant-baseline="middle" class="tick-label">SC</text>
+  <text x="481.33" y="244.00" text-anchor="middle" dominant-baseline="middle" class="tick-label">n/a</text>
+  <text x="481.33" y="408.00" text-anchor="middle" dominant-baseline="middle" class="tick-label">Catalog</text>
+</svg>
