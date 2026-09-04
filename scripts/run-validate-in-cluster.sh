@@ -272,6 +272,7 @@ export VALIDATE_CMD="${validate_cmd}"
 # envsubst is restricted to the explicit deployment-time variable allowlist
 # so that shell runtime variables (validate_pid, tail_pid, status, etc.)
 # inside the wrapper script are preserved unchanged.
+# shellcheck disable=SC2016 # envsubst receives literal variable references.
 envsubst '${CHAIN_REACTION_IMAGE} ${JOB_NAME} ${NAMESPACE} ${API_ENV_NAME} ${SECRET_NAME} ${REMOTE_OUTPUT} ${REMOTE_STDOUT} ${REMOTE_EXITCODE} ${REMOTE_DONE} ${REMOTE_RELEASE} ${VALIDATE_CMD}' < "${DEPLOY_DIR}/validate-job.yaml" | kubectl apply -f -
 
 echo "=== Waiting for pod startup ==="

@@ -186,6 +186,11 @@ run_batch() {
     local end_index="$2"
     local skip_healthcheck_flag="${3}"
     local idx=""
+    local -a skip_healthcheck_args=()
+
+    if [[ -n "${skip_healthcheck_flag}" ]]; then
+        skip_healthcheck_args=("${skip_healthcheck_flag}")
+    fi
 
     for idx in $(seq "${start_index}" "${end_index}"); do
         local timestamp=""
@@ -214,7 +219,7 @@ run_batch() {
             --llm-model "${LLM_MODEL}" \
             --max-steps "${MAX_STEPS}" \
             --time-budget "${TIME_BUDGET}" \
-            ${skip_healthcheck_flag}; then
+            "${skip_healthcheck_args[@]}"; then
             runner_rc=0
         else
             runner_rc=$?

@@ -10,23 +10,39 @@ The project is designed to answer a practical question: which paths are merely p
 
 Chain Reaction uses a bounded plan-act-observe workflow:
 
-```text
-Assumed-breach Pod
-        |
-        v
-Discover Kubernetes objects and effective permissions
-        |
-        v
-Build hypotheses and choose a bounded validation step
-        |
-        v
-Run a Kubernetes API, RBAC, secret, token, or network probe
-        |
-        v
-Record observations, snapshots, and failure reasons
-        |
-        v
-Write a phase-labeled attack graph and metrics
+```mermaid
+flowchart LR
+    identity["Assumed-breach Pod<br/>ServiceAccount credentials"] --> discover["Discover objects<br/>and effective permissions"]
+
+    subgraph agent["Chain Reaction agent"]
+        direction TB
+        discover --> plan["Build hypotheses<br/>and select one bounded step"]
+        plan --> enforce["Apply guardrails<br/>scope, rate, time, step limits"]
+        enforce --> probe["Run one registered probe<br/>Kubernetes API, RBAC, secret, token, network"]
+        probe --> observe["Record observations<br/>snapshots, evidence, failure reasons"]
+        observe --> graph["Update phase-labeled<br/>attack graph and metrics"]
+        graph -. next observation .-> plan
+    end
+
+    probe --> api["Kubernetes API and<br/>in-scope cluster resources"]
+    api -. result .-> observe
+    observe --> artifacts["Evidence bundle<br/>snapshots, evidence.jsonl, graph, metrics"]
+    enforce -->|"blocked"| stopped["Stop with recorded reason"]
+    graph --> result["validated, theoretical,<br/>failed, or failed_rbac"]
+
+    classDef input fill:#000000,stroke:#566F87,color:#DED8D1,stroke-width:2px;
+    classDef action fill:#0C447C,stroke:#497EB3,color:#DED8D1,stroke-width:2px;
+    classDef planner fill:#3C3489,stroke:#6E65B5,color:#DED8D1,stroke-width:2px;
+    classDef guard fill:#633806,stroke:#B7741B,color:#DED8D1,stroke-width:2px;
+    classDef evidence fill:#085041,stroke:#4DA06D,color:#DED8D1,stroke-width:2px;
+    classDef stop fill:#712B13,stroke:#B65A39,color:#DED8D1,stroke-width:2px;
+
+    class identity input;
+    class discover,probe,api action;
+    class plan planner;
+    class enforce guard;
+    class observe,graph,artifacts,result evidence;
+    class stopped stop;
 ```
 
 The agent uses only the Pod's assigned ServiceAccount credentials and ordinary cluster networking. A step is marked `validated` only when the matching probe succeeds and produces supporting evidence. A step can instead remain `theoretical`, fail because of RBAC or reachability, or stop because a guardrail blocks it.
