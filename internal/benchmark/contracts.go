@@ -77,6 +77,13 @@ type Lifecycle struct {
 	TTLSeconds   int    `json:"ttl_seconds"`
 }
 
+// CounterfactualControl is the one declared condition changed between a
+// positive and blocked scenario pair. It is controller-only metadata.
+type CounterfactualControl struct {
+	Kind    string `json:"kind"`
+	Enabled bool   `json:"enabled"`
+}
+
 // OracleReference binds a scenario to a controller-only oracle digest.
 type OracleReference struct {
 	Version string `json:"version"`
@@ -86,16 +93,17 @@ type OracleReference struct {
 // ScenarioManifest is controller-only. It may describe the deployed range but
 // must not be passed to the agent or written to public fixtures for hidden runs.
 type ScenarioManifest struct {
-	Version        string          `json:"version"`
-	InstanceID     string          `json:"instance_id"`
-	Split          Split           `json:"split"`
-	Variant        Variant         `json:"variant"`
-	SeedCommitment string          `json:"seed_commitment"`
-	Attacker       Actor           `json:"attacker"`
-	Resources      []ObjectRef     `json:"resources"`
-	AllowedActions []ProofAction   `json:"allowed_actions"`
-	OracleRef      OracleReference `json:"oracle_ref"`
-	Lifecycle      Lifecycle       `json:"lifecycle"`
+	Version        string                `json:"version"`
+	InstanceID     string                `json:"instance_id"`
+	Split          Split                 `json:"split"`
+	Variant        Variant               `json:"variant"`
+	SeedCommitment string                `json:"seed_commitment"`
+	Attacker       Actor                 `json:"attacker"`
+	Resources      []ObjectRef           `json:"resources"`
+	AllowedActions []ProofAction         `json:"allowed_actions"`
+	OracleRef      OracleReference       `json:"oracle_ref"`
+	Control        CounterfactualControl `json:"control"`
+	Lifecycle      Lifecycle             `json:"lifecycle"`
 }
 
 // Predicate is a controller-only machine predicate. Predicate details are not

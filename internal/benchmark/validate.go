@@ -57,6 +57,12 @@ func (m ScenarioManifest) Validate() error {
 	if err := validateDigest("oracle_ref.digest", m.OracleRef.Digest); err != nil {
 		return err
 	}
+	if err := validateIdentifier("control.kind", m.Control.Kind); err != nil {
+		return err
+	}
+	if (m.Variant == VariantPositive) != m.Control.Enabled {
+		return fmt.Errorf("scenario variant and control.enabled disagree")
+	}
 	if err := validateIdentifier("lifecycle.run_namespace", m.Lifecycle.RunNamespace); err != nil {
 		return err
 	}

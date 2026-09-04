@@ -53,7 +53,8 @@ bias.
 
 ## Current limits
 
-This contract foundation does not create hidden instances, render Kubernetes
-objects, provision identities, score evidence, or perform Kind setup and
-teardown. Those capabilities remain required before benchmark v2 results may
-be reported.
+The contract generator creates deterministic controller-only contract pairs for
+eight archetype shapes and one declared positive/blocked control. It does not
+render Kubernetes objects, provision identities, store hidden seeds, score
+evidence, or perform Kind setup and teardown. Those capabilities remain
+required before benchmark v2 results may be reported.

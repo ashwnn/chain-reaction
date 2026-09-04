@@ -19,6 +19,7 @@ func validScenario() ScenarioManifest {
 		Resources:      []ObjectRef{{APIVersion: "v1", Kind: "Secret", Namespace: "range-a", Name: "object-a"}},
 		AllowedActions: []ProofAction{{ID: "read", Kind: "kubernetes_get", TimeoutSecs: 30}},
 		OracleRef:      OracleReference{Version: OracleVersion, Digest: testDigest},
+		Control:        CounterfactualControl{Kind: "rbac_binding", Enabled: true},
 		Lifecycle:      Lifecycle{RunNamespace: "range-a", CleanupOwner: "controller", TTLSeconds: 300},
 	}
 }
