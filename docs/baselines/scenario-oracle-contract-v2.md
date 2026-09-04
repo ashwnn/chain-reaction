@@ -1,7 +1,7 @@
 # Benchmark v2 scenario and oracle contract
 
-Status: contract foundation only. Range generation, controller lifecycle, and
-runtime scoring are not implemented by this document.
+Status: controller-side contract foundation. Range generation and lifecycle
+integrity checks are implemented; runtime scoring remains incomplete.
 
 ## Trust boundary
 
@@ -67,9 +67,11 @@ workload, Secret, Service, Endpoints, decoy, and conditional NetworkPolicy
 objects in stable order. It does not provision a cluster or perform Kind setup
 and teardown automatically. `ApplyRenderedRange` creates controller-rendered
 objects through the Kubernetes API, rejects pre-existing run state, and
-`CleanupAppliedRange` deletes them in reverse order. The opt-in Kind lifecycle
-test verifies Namespace creation, Service-generated Endpoints, and namespace
-deletion. The controller-only scorer evaluates
+attests each returned object UID. `CleanupAppliedRange` uses UID-preconditioned
+deletion in reverse order and waits for residue to disappear, rejecting a
+replacement object under a range name. The opt-in Kind lifecycle test verifies
+Namespace creation, Service-generated Endpoints, and namespace deletion. The
+controller-only scorer evaluates
 exact normalized actor, action, target, effect, sequence, and evidence-digest
 bindings, but does not yet query live cluster state. Those capabilities remain
 required before benchmark v2 results may be reported.

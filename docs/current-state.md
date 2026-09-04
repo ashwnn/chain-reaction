@@ -1,8 +1,8 @@
 # Current implementation state
 
-Status: repository evidence inventory, updated through WORK-002 contract foundation
+Status: repository evidence inventory, updated through the partial WORK-002 range lifecycle
 
-Reviewed commit: `cfbfbb68d8472fb51fdd748d2666264d73ac6048` (`main`, 2026-09-03)
+Reviewed commit: `6c0bab15d1a103c2843fce4caaae9c030d47edb4` (`main`, 2026-09-03), plus the current lifecycle-integrity change
 
 ## Scope and evidence rules
 
@@ -29,8 +29,8 @@ credentials, or evaluation artifacts are recorded here.
 | Centralized immutable pre-I/O policy | absent | `internal/guardrails/enforcer.go` provides namespace and rate checks only. Tools retain their own defaults and policy-like inputs. | No policy canonicalization, DNS, destination, or fuzz suite exists. | unverified |
 | Secret-read policy boundary | unsafe legacy behavior | `internal/tools/validation/read_secret.go` defaults namespace after runner checks and accepts model-controlled `allow_namespaces`. | Existing tests do not prove immutable operator policy. | `729163f` |
 | Restricted agent and privileged controller identities | absent | `deploy/rbac.yaml` binds the agent ServiceAccount to a cluster-wide read ClusterRole, including Secrets and RBAC resources. | No controller/agent visibility or permission-attestation test exists. | `eb34441` |
-| Benchmark v2 contracts and public commitments | implemented, controller-only foundation | `internal/benchmark` defines strict scenario, oracle, run, and public-commitment contracts with canonical hashing and seed derivation. | `internal/benchmark/contracts_test.go` | pending local commit |
-| Hidden parameterized benchmark v2 | partial | Controller-only generation, rendering, private-seed writes, public commitments, exact evidence scoring, and opt-in Kind apply/cleanup lifecycle are implemented; live cluster-state scoring inputs are absent. | Contract tests cover strict decoding, tampering prerequisites, canonical hashing, projection binding, seed derivation, paired determinism, rendering, public/private separation, exact scoring, and live Kind lifecycle cleanup. | pending local commit |
+| Benchmark v2 contracts and public commitments | implemented, controller-only foundation | `internal/benchmark` defines strict scenario, oracle, run, and public-commitment contracts with canonical hashing and seed derivation. | `internal/benchmark/contracts_test.go` | `7feaaf8` through `6c0bab1` |
+| Hidden parameterized benchmark v2 | partial | Controller-only generation, rendering, private-seed writes, public commitments, exact evidence scoring, and opt-in Kind range lifecycle are implemented. Apply attests API-returned UIDs; cleanup uses UID preconditions, detects replacements, and waits for residue removal. Live proof execution and cluster-state scoring inputs are absent. | Contract tests cover strict decoding, tampering prerequisites, canonical hashing, projection binding, seed derivation, paired determinism, rendering, public/private separation, exact scoring, lifecycle identity/residue checks, and opt-in Kind cleanup. | `7feaaf8` through current worktree |
 | Deterministic replay | absent | No `replay` command or production replay path exists. | No replay golden or tamper-rejection suite exists. | unverified |
 | Independent repeated scenario instances | absent | `scripts/run-reproducibility.sh` runs all five families together, then creates per-family symlink views. | Per-family views are not independent runs. | `eb34441` |
 | Controlled evaluation matrix and paired analysis | absent | No versioned matrix manifest, hidden-run index, eligibility gate, or paired v2 analysis exists. | Existing analysis is legacy catalog-family output. | `729163f`, `eb34441` |
