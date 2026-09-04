@@ -65,7 +65,11 @@ eight archetype shapes and one declared positive/blocked control. Its in-memory
 renderer creates the Namespace, ServiceAccount, Role, conditional RoleBinding,
 workload, Secret, Service, Endpoints, decoy, and conditional NetworkPolicy
 objects in stable order. It does not provision a cluster or perform Kind setup
-and teardown. The controller-only scorer evaluates
+and teardown automatically. `ApplyRenderedRange` creates controller-rendered
+objects through the Kubernetes API, rejects pre-existing run state, and
+`CleanupAppliedRange` deletes them in reverse order. The opt-in Kind lifecycle
+test verifies Namespace creation, Service-generated Endpoints, and namespace
+deletion. The controller-only scorer evaluates
 exact normalized actor, action, target, effect, sequence, and evidence-digest
 bindings, but does not yet query live cluster state. Those capabilities remain
 required before benchmark v2 results may be reported.

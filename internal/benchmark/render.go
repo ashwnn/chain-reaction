@@ -30,8 +30,7 @@ func RenderKubernetes(instance GeneratedInstance) (RenderedRange, error) {
 		resource("rbac.authorization.k8s.io/v1", "Role", ns, "range-reader", map[string]any{"rules": []any{map[string]any{"apiGroups": []any{""}, "resources": []any{"secrets", "configmaps", "services"}, "verbs": []any{"get"}}}}),
 		resource("v1", "Pod", ns, "workload", map[string]any{"labels": map[string]any{"app": "range-workload"}, "spec": map[string]any{"serviceAccountName": s.Attacker.Name, "containers": []any{map[string]any{"name": "workload", "image": "registry.k8s.io/pause:3.10"}}}}),
 		resource("v1", "Secret", ns, "proof-material", map[string]any{"type": "Opaque"}),
-		resource("v1", "Service", ns, "proof-service", map[string]any{"spec": map[string]any{"selector": map[string]any{"app": "range-workload"}, "ports": []any{map[string]any{"port": s.NetworkPort, "targetPort": s.NetworkPort}}}}),
-		resource("v1", "Endpoints", ns, "proof-service", map[string]any{"subsets": []any{map[string]any{"addresses": []any{map[string]any{"ip": "10.0.0.10"}}, "ports": []any{map[string]any{"port": s.NetworkPort}}}}}),
+		resource("v1", "Service", ns, "proof-service", map[string]any{"spec": map[string]any{"selector": map[string]any{"app": "range-workload"}, "ports": []any{map[string]any{"port": int64(s.NetworkPort), "targetPort": int64(s.NetworkPort)}}}}),
 		resource("v1", "ConfigMap", ns, "decoy", map[string]any{"data": map[string]any{"notice": "not proof material"}}),
 	}
 	if s.Control.Kind == "rbac_binding" && s.Control.Enabled {
@@ -62,6 +61,10 @@ func resource(apiVersion, kind, namespace, name string, fields map[string]any) u
 	}
 	object := map[string]any{"apiVersion": apiVersion, "kind": kind, "metadata": metadata}
 	for key, value := range fields {
+		if key == "labels" {
+			metadata["labels"] = value
+			continue
+		}
 		object[key] = value
 	}
 	return unstructured.Unstructured{Object: object}
