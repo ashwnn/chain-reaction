@@ -73,5 +73,6 @@ Namespace creation, Service-generated Endpoints, and namespace deletion. The
 controller-only scorer evaluates exact normalized actor, action, target,
 effect, sequence, and evidence-digest bindings. `ScoreWithCluster` also checks
 the live actor, target, and configured RBAC, NetworkPolicy, or token-audience
-control. A complete Kind matrix remains required before benchmark v2 results
-may be reported.
+control. `chain-reaction benchmark initialize` creates 24 private seed files
+and a 64-entry public commitment inventory. The complete 16-case Kind matrix
+has passed with no residue.

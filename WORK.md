@@ -153,7 +153,7 @@ Verification recorded 2026-09-03:
 
 ## WORK-002: Recover or implement benchmark v2 and its deterministic oracle
 
-Status: In progress - controller-only contracts, paired generation, seed-derived range resources, exact and live-state oracle gates, and UID-bound lifecycle are implemented; the committed seed inventory and a stable full Kind matrix remain
+Status: Implemented - controller-only contracts, 64 public commitments, 24 private seeds, exact and live-state oracle gates, isolated identities, and the full Kind matrix are verified
 Priority: P0  
 Linear: CR-253, CR-254, CR-259, CR-260, CR-261, CR-262
 
@@ -206,6 +206,7 @@ Verification recorded 2026-09-03:
 - `go test ./internal/benchmark`, `go test ./...`, `go vet ./...`, and `go build ./cmd/chain-reaction` pass.
 - Controller apply now verifies returned object UIDs. Cleanup uses UID preconditions, detects same-name replacements, and waits for all applied objects to disappear. Unit tests cover matching objects, replacement residue, and successful cleanup; the opt-in Kind test remains required for live cluster verification.
 - The expanded positive/blocked Kind matrix was started against the local Kind cluster but hung after cleanup. The isolated test was stopped and its exact generated namespace was deleted. Do not treat the matrix as passed until the hang is diagnosed and a complete run exits cleanly.
+- `chain-reaction benchmark initialize` created 24 raw controller-only seeds under ignored `temp/` and [the 64-entry public commitment inventory](docs/baselines/benchmark-v2-commitments.json). The full timeout-bound Kind matrix then passed all 16 archetype/variant cases in 257 seconds with no residual namespaces or workload Pods. Applied identity checks denied the agent controller-namespace Secret access and namespace creation, while permitting its base namespaced Pod read and controller Secret read.
 
 ---
 
