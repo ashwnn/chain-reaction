@@ -36,6 +36,11 @@ func TestGenerateCoversEightArchetypesDeterministically(t *testing.T) {
 		if err := first.Oracle.Validate(); err != nil {
 			t.Fatalf("generated oracle for %s is invalid: %v", archetype, err)
 		}
+		for _, resource := range first.Scenario.Resources {
+			if resource.Name == "" || resource.Name == "range-reader" || resource.Name == "proof-material" || resource.Name == "proof-service" || resource.Name == "decoy" {
+				t.Fatalf("generated resource for %s is not seed-derived: %+v", archetype, resource)
+			}
+		}
 	}
 }
 

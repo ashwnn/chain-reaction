@@ -32,10 +32,14 @@ func TestRenderKubernetesIsDeterministicAndKeepsPairIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if hasObject(blockedRange.Objects, "RoleBinding", "range-reader") {
+	binding, err := requireSingleResource(positive.Scenario.Resources, "RoleBinding")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasObject(blockedRange.Objects, "RoleBinding", binding.Name) {
 		t.Fatal("blocked RBAC pair includes binding")
 	}
-	if !hasObject(first.Objects, "RoleBinding", "range-reader") {
+	if !hasObject(first.Objects, "RoleBinding", binding.Name) {
 		t.Fatal("positive RBAC pair lacks binding")
 	}
 	body, err := json.Marshal(first.Objects)

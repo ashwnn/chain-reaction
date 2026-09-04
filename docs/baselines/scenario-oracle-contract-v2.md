@@ -1,7 +1,7 @@
 # Benchmark v2 scenario and oracle contract
 
-Status: controller-side contract foundation. Range generation and lifecycle
-integrity checks are implemented; runtime scoring remains incomplete.
+Status: controller-side contract foundation. Seed-derived range generation,
+lifecycle integrity checks, and controller-side live-state scoring are implemented.
 
 ## Trust boundary
 
@@ -61,17 +61,17 @@ depth measure; controller deployments should use storage outside the checkout.
 ## Current limits
 
 The contract generator creates deterministic controller-only contract pairs for
-eight archetype shapes and one declared positive/blocked control. Its in-memory
-renderer creates the Namespace, ServiceAccount, Role, conditional RoleBinding,
-workload, Secret, Service, Endpoints, decoy, and conditional NetworkPolicy
-objects in stable order. It does not provision a cluster or perform Kind setup
-and teardown automatically. `ApplyRenderedRange` creates controller-rendered
+eight archetype shapes and one declared positive/blocked control. It derives
+each Namespace, ServiceAccount, Role, RoleBinding, workload, Secret, Service,
+endpoint identity, decoy, and NetworkPolicy name from the seed. Its in-memory
+renderer creates the resulting objects in stable order. `ApplyRenderedRange` creates controller-rendered
 objects through the Kubernetes API, rejects pre-existing run state, and
 attests each returned object UID. `CleanupAppliedRange` uses UID-preconditioned
 deletion in reverse order and waits for residue to disappear, rejecting a
 replacement object under a range name. The opt-in Kind lifecycle test verifies
 Namespace creation, Service-generated Endpoints, and namespace deletion. The
-controller-only scorer evaluates
-exact normalized actor, action, target, effect, sequence, and evidence-digest
-bindings, but does not yet query live cluster state. Those capabilities remain
-required before benchmark v2 results may be reported.
+controller-only scorer evaluates exact normalized actor, action, target,
+effect, sequence, and evidence-digest bindings. `ScoreWithCluster` also checks
+the live actor, target, and configured RBAC, NetworkPolicy, or token-audience
+control. A complete Kind matrix remains required before benchmark v2 results
+may be reported.

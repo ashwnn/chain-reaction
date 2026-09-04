@@ -78,26 +78,26 @@ func Generate(request GenerationRequest) (GeneratedInstance, error) {
 	if err != nil {
 		return GeneratedInstance{}, err
 	}
-	targetName, err := DeriveDNSName(request.Seed, "target/"+request.InstanceID, 20)
-	if err != nil {
-		return GeneratedInstance{}, err
-	}
 	port, err := DerivePort(request.Seed, "port/"+request.InstanceID, 30000, 32767)
 	if err != nil {
 		return GeneratedInstance{}, err
 	}
-	target := ObjectRef{APIVersion: "v1", Kind: targetKind(request.Archetype), Namespace: namespace, Name: targetName}
 	actor := Actor{Namespace: namespace, Name: actorName, Profile: request.Profile}
+	resources, target, err := generateResources(request, namespace, actorName)
+	if err != nil {
+		return GeneratedInstance{}, err
+	}
 	control := CounterfactualControl{Kind: controlKind(request.Archetype), Enabled: request.Variant == VariantPositive}
 	scenario := ScenarioManifest{
 		Version:        ScenarioVersion,
 		InstanceID:     request.InstanceID,
+		Archetype:      request.Archetype,
 		Split:          request.Split,
 		Variant:        request.Variant,
 		SeedCommitment: commitment,
 		NetworkPort:    int(port),
 		Attacker:       actor,
-		Resources:      []ObjectRef{target},
+		Resources:      resources,
 		AllowedActions: []ProofAction{{ID: "proof", Kind: actionKind(request.Archetype), TimeoutSecs: 30}},
 		OracleRef:      OracleReference{Version: OracleVersion},
 		Control:        control,
@@ -131,6 +131,63 @@ func Generate(request GenerationRequest) (GeneratedInstance, error) {
 			OracleDigest:   scenario.OracleRef.Digest,
 		},
 	}, nil
+}
+
+func generateResources(request GenerationRequest, namespace, actorName string) ([]ObjectRef, ObjectRef, error) {
+	names := make(map[string]string, 7)
+	for _, key := range []string{"role", "binding", "workload", "secret", "service", "decoy", "policy"} {
+		name, err := DeriveDNSName(request.Seed, key+"/"+request.InstanceID, 20)
+		if err != nil {
+			return nil, ObjectRef{}, err
+		}
+		names[key] = name
+	}
+	targetNamespace := namespace
+	if request.Archetype == ArchetypeCrossNamespace {
+		derived, err := DeriveDNSName(request.Seed, "target-namespace/"+request.InstanceID, 20)
+		if err != nil {
+			return nil, ObjectRef{}, err
+		}
+		targetNamespace = derived
+	}
+	refs := []ObjectRef{
+		{APIVersion: "v1", Kind: "Namespace", Name: namespace},
+		{APIVersion: "v1", Kind: "ServiceAccount", Namespace: namespace, Name: actorName},
+		{APIVersion: "rbac.authorization.k8s.io/v1", Kind: "Role", Namespace: namespace, Name: names["role"]},
+		{APIVersion: "rbac.authorization.k8s.io/v1", Kind: "RoleBinding", Namespace: namespace, Name: names["binding"]},
+		{APIVersion: "v1", Kind: "Pod", Namespace: namespace, Name: names["workload"]},
+		{APIVersion: "v1", Kind: "Secret", Namespace: targetNamespace, Name: names["secret"]},
+		{APIVersion: "v1", Kind: "Service", Namespace: namespace, Name: names["service"]},
+		{APIVersion: "v1", Kind: "ConfigMap", Namespace: namespace, Name: names["decoy"]},
+		{APIVersion: "networking.k8s.io/v1", Kind: "NetworkPolicy", Namespace: namespace, Name: names["policy"]},
+	}
+	if targetNamespace != namespace {
+		refs = append(refs, ObjectRef{APIVersion: "v1", Kind: "Namespace", Name: targetNamespace})
+	}
+	var target ObjectRef
+	switch request.Archetype {
+	case ArchetypeWorkloadIdentity:
+		target = refs[1]
+	case ArchetypeNamespacedRBAC:
+		target = refs[3]
+	case ArchetypeSecretAccess, ArchetypeCrossNamespace:
+		target = refs[5]
+	case ArchetypeServiceMovement, ArchetypeAuthenticatedApp:
+		target = refs[6]
+	case ArchetypeDisposableWorkload:
+		target = refs[4]
+	case ArchetypePolicyBlocked:
+		target = refs[8]
+	default:
+		return nil, ObjectRef{}, fmt.Errorf("unsupported archetype %q", request.Archetype)
+	}
+	resources := []ObjectRef{target}
+	for _, ref := range refs {
+		if ref != target {
+			resources = append(resources, ref)
+		}
+	}
+	return resources, target, nil
 }
 
 func targetKind(archetype Archetype) string {

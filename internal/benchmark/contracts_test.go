@@ -12,6 +12,7 @@ func validScenario() ScenarioManifest {
 	return ScenarioManifest{
 		Version:        ScenarioVersion,
 		InstanceID:     "instance-001",
+		Archetype:      ArchetypeSecretAccess,
 		Split:          SplitHidden,
 		Variant:        VariantPositive,
 		SeedCommitment: testDigest,

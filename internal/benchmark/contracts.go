@@ -95,6 +95,7 @@ type OracleReference struct {
 type ScenarioManifest struct {
 	Version        string                `json:"version"`
 	InstanceID     string                `json:"instance_id"`
+	Archetype      Archetype             `json:"archetype"`
 	Split          Split                 `json:"split"`
 	Variant        Variant               `json:"variant"`
 	SeedCommitment string                `json:"seed_commitment"`

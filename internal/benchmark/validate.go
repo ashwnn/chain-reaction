@@ -12,8 +12,8 @@ func (m ScenarioManifest) Validate() error {
 	if err := validateIdentifier("instance_id", m.InstanceID); err != nil {
 		return err
 	}
-	if !m.Split.valid() || !m.Variant.valid() {
-		return fmt.Errorf("scenario split or variant is invalid")
+	if !m.Archetype.valid() || !m.Split.valid() || !m.Variant.valid() {
+		return fmt.Errorf("scenario archetype, split, or variant is invalid")
 	}
 	if err := validateDigest("seed_commitment", m.SeedCommitment); err != nil {
 		return err
