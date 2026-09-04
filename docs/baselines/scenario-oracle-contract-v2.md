@@ -64,6 +64,8 @@ The contract generator creates deterministic controller-only contract pairs for
 eight archetype shapes and one declared positive/blocked control. Its in-memory
 renderer creates the Namespace, ServiceAccount, Role, conditional RoleBinding,
 workload, Secret, Service, Endpoints, decoy, and conditional NetworkPolicy
-objects in stable order. It does not provision a cluster, score evidence, or
-perform Kind setup and teardown. Those capabilities remain
+objects in stable order. It does not provision a cluster or perform Kind setup
+and teardown. The controller-only scorer evaluates
+exact normalized actor, action, target, effect, sequence, and evidence-digest
+bindings, but does not yet query live cluster state. Those capabilities remain
 required before benchmark v2 results may be reported.
