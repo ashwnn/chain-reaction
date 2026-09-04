@@ -1,6 +1,6 @@
 # Current implementation state
 
-Status: repository evidence inventory, updated through WORK-001
+Status: repository evidence inventory, updated through WORK-000 and WORK-001
 
 Reviewed commit: `cfbfbb68d8472fb51fdd748d2666264d73ac6048` (`main`, 2026-09-03)
 
@@ -83,33 +83,36 @@ with a C compiler.
 
 ## Linear reconciliation ledger
 
-Linear was not authenticated during this review. The following rows therefore
-state the repository result, not the issue's actual status. Do not close,
-reopen, relabel, or infer an issue from this table until its attachments,
-comments, branches, pull requests, and commits have been reviewed.
+Linear reconciliation completed on 2026-09-03. Every listed issue was marked
+Done, but had no attachments or documents. Linear returned no diffs for
+`ashwnn/chain-reaction`; every recorded issue branch is absent from `origin`,
+which exposes only `main` at `cfbfbb6`. Completion comments point to files and
+commands absent from this checkout. The older checkout contains only v1
+calibration material. Each issue was returned to `In Progress` with this
+evidence recorded in Linear.
 
 | Linear issue | Repository evidence on `main` | Current disposition |
 | --- | --- | --- |
-| CR-253 | No benchmark v2 contract, generator, or commitment implementation found. | unverified - inspect Linear history |
-| CR-254 | No deterministic semantic oracle or controller-only oracle configuration found. | unverified - inspect Linear history |
-| CR-255 | No versioned `ValidationClaim` or exact resource/actor/effect predicate system found. | unverified - inspect Linear history |
-| CR-259 | No versioned scenario-manifest contract found. | unverified - inspect Linear history |
-| CR-260 | No hidden-instance generator or public seed-commitment artifact found. | unverified - inspect Linear history |
-| CR-261 | No controller-only hidden range setup or teardown contract found. | unverified - inspect Linear history |
-| CR-262 | No immutable oracle result or predicate-level output found. | unverified - inspect Linear history |
-| CR-263 | Acceptance criteria are not present in this checkout or in `WORK.md`. | unverified - inspect Linear history |
-| CR-264 | Acceptance criteria are not present in this checkout or in `WORK.md`. | unverified - inspect Linear history |
-| CR-265 | Acceptance criteria are not present in this checkout or in `WORK.md`. | unverified - inspect Linear history |
-| CR-266 | Acceptance criteria are not present in this checkout or in `WORK.md`. | unverified - inspect Linear history |
-| CR-267 | Acceptance criteria are not present in this checkout or in `WORK.md`. | unverified - inspect Linear history |
-| CR-268 | Acceptance criteria are not present in this checkout or in `WORK.md`. | unverified - inspect Linear history |
-| CR-269 | Acceptance criteria are not present in this checkout or in `WORK.md`. | unverified - inspect Linear history |
-| CR-270 | Acceptance criteria are not present in this checkout or in `WORK.md`. | unverified - inspect Linear history |
-| CR-271 | Acceptance criteria are not present in this checkout or in `WORK.md`. | unverified - inspect Linear history |
-| CR-272 | Acceptance criteria are not present in this checkout or in `WORK.md`. | unverified - inspect Linear history |
-| CR-273 | Acceptance criteria are not present in this checkout or in `WORK.md`. | unverified - inspect Linear history |
-| CR-274 | No typed semantic-claim implementation found. | unverified - inspect Linear history |
-| CR-275 | No typed semantic-claim implementation found. | unverified - inspect Linear history |
+| CR-253 | No benchmark v2 contract, generator, or commitment implementation found. | reopened |
+| CR-254 | No deterministic semantic oracle or controller-only oracle configuration found. | reopened |
+| CR-255 | No versioned `ValidationClaim` or exact resource/actor/effect predicate system found. | reopened |
+| CR-259 | No versioned scenario-manifest contract found. | reopened |
+| CR-260 | No hidden-instance generator or public seed-commitment artifact found. | reopened |
+| CR-261 | No controller-only hidden range setup or teardown contract found. | reopened |
+| CR-262 | No immutable oracle result or predicate-level output found. | reopened |
+| CR-263 | Claimed live configuration baseline is absent. | reopened |
+| CR-264 | Claimed resource-specific discovery baseline is absent. | reopened |
+| CR-265 | Claimed uniform baseline scoring is absent. | reopened |
+| CR-266 | Claimed fairness envelope and semantic metrics are absent. | reopened |
+| CR-267 | Claimed offline baseline harness and Kind matrix are absent. | reopened |
+| CR-268 | Claimed production-artifact baseline runner is absent. | reopened |
+| CR-269 | Claimed production baseline matrix is absent. | reopened |
+| CR-270 | Blind default is partially present; the claimed complete mode contract is absent. | reopened |
+| CR-271 | Claimed bounded planner-observation boundary is absent. | reopened |
+| CR-272 | Claimed typed hypothesis lifecycle is absent. | reopened |
+| CR-273 | Claimed live hypothesis integration and v4 metrics are absent. | reopened |
+| CR-274 | No typed semantic-claim implementation found. | reopened |
+| CR-275 | No typed semantic matcher implementation found. | reopened |
 
 ## Recovery search
 

@@ -63,7 +63,7 @@ Work should proceed in this order. Primary evaluation must not start early.
 
 ## WORK-000: Reconcile Linear, repository history, and implementation truth
 
-Status: Open  
+Status: Implemented - all listed Linear issues reopened; missing v2 work is tracked below
 Priority: P0  
 Linear context: CR-253, CR-254, CR-259 through CR-275, project description
 
@@ -89,7 +89,7 @@ Linear says the contamination-resistant protocol, hidden range generator, semant
 
 - Every Done item in M7 and the completed portion of M8 has verifiable repository evidence or is explicitly reopened.
 - `docs/current-state.md` exists and is accurate against main.
-- Public benchmark commitments exist without exposing hidden scenario material.
+- Public benchmark commitments are explicitly absent and tracked by WORK-002 without exposing hidden scenario material.
 - No hidden target names, ports, predicates, or solution ordering enter planner-visible or public fixtures.
 - The repository has one unambiguous source of truth for current capability.
 
@@ -97,7 +97,7 @@ Linear says the contamination-resistant protocol, hidden range generator, semant
 
 - Compare `git ls-tree -r HEAD`, Linear issue claims, and `docs/current-state.md` mechanically.
 - Search public code and artifacts for hidden canaries and benchmark-only identifiers.
-- Review recovered commits before starting WORK-002 or WORK-003.
+- Review recovered commits before starting WORK-003.
 
 ---
 
@@ -153,7 +153,7 @@ Verification recorded 2026-09-03:
 
 ## WORK-002: Recover or implement benchmark v2 and its deterministic oracle
 
-Status: Blocked by WORK-000  
+Status: Open
 Priority: P0  
 Linear: CR-253, CR-254, CR-259, CR-260, CR-261, CR-262
 
