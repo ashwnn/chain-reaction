@@ -54,7 +54,9 @@ bias.
 ## Current limits
 
 The contract generator creates deterministic controller-only contract pairs for
-eight archetype shapes and one declared positive/blocked control. It does not
-render Kubernetes objects, provision identities, store hidden seeds, score
-evidence, or perform Kind setup and teardown. Those capabilities remain
+eight archetype shapes and one declared positive/blocked control. Its in-memory
+renderer creates the Namespace, ServiceAccount, Role, conditional RoleBinding,
+workload, Secret, Service, Endpoints, decoy, and conditional NetworkPolicy
+objects in stable order. It does not provision a cluster, store hidden seeds,
+score evidence, or perform Kind setup and teardown. Those capabilities remain
 required before benchmark v2 results may be reported.

@@ -18,6 +18,9 @@ func (m ScenarioManifest) Validate() error {
 	if err := validateDigest("seed_commitment", m.SeedCommitment); err != nil {
 		return err
 	}
+	if m.NetworkPort < 1024 || m.NetworkPort > 65535 {
+		return fmt.Errorf("network_port must be between 1024 and 65535")
+	}
 	if err := validateActor("attacker", m.Attacker); err != nil {
 		return err
 	}

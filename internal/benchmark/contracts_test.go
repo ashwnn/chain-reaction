@@ -15,6 +15,7 @@ func validScenario() ScenarioManifest {
 		Split:          SplitHidden,
 		Variant:        VariantPositive,
 		SeedCommitment: testDigest,
+		NetworkPort:    30001,
 		Attacker:       Actor{Namespace: "range-a", Name: "agent", Profile: IdentityLeastPrivilege},
 		Resources:      []ObjectRef{{APIVersion: "v1", Kind: "Secret", Namespace: "range-a", Name: "object-a"}},
 		AllowedActions: []ProofAction{{ID: "read", Kind: "kubernetes_get", TimeoutSecs: 30}},

@@ -82,6 +82,10 @@ func Generate(request GenerationRequest) (GeneratedInstance, error) {
 	if err != nil {
 		return GeneratedInstance{}, err
 	}
+	port, err := DerivePort(request.Seed, "port/"+request.InstanceID, 30000, 32767)
+	if err != nil {
+		return GeneratedInstance{}, err
+	}
 	target := ObjectRef{APIVersion: "v1", Kind: targetKind(request.Archetype), Namespace: namespace, Name: targetName}
 	actor := Actor{Namespace: namespace, Name: actorName, Profile: request.Profile}
 	control := CounterfactualControl{Kind: controlKind(request.Archetype), Enabled: request.Variant == VariantPositive}
@@ -91,6 +95,7 @@ func Generate(request GenerationRequest) (GeneratedInstance, error) {
 		Split:          request.Split,
 		Variant:        request.Variant,
 		SeedCommitment: commitment,
+		NetworkPort:    int(port),
 		Attacker:       actor,
 		Resources:      []ObjectRef{target},
 		AllowedActions: []ProofAction{{ID: "proof", Kind: actionKind(request.Archetype), TimeoutSecs: 30}},

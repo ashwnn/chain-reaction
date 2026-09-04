@@ -98,6 +98,7 @@ type ScenarioManifest struct {
 	Split          Split                 `json:"split"`
 	Variant        Variant               `json:"variant"`
 	SeedCommitment string                `json:"seed_commitment"`
+	NetworkPort    int                   `json:"network_port"`
 	Attacker       Actor                 `json:"attacker"`
 	Resources      []ObjectRef           `json:"resources"`
 	AllowedActions []ProofAction         `json:"allowed_actions"`
