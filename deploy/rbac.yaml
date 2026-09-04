@@ -1,27 +1,55 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
-  name: chain-reaction-read
+  name: chain-reaction-agent-base
+  namespace: chain-reaction
 rules:
   - apiGroups: [""]
-    resources: ["namespaces", "pods", "services", "secrets", "serviceaccounts", "configmaps", "endpoints"]
-    verbs: ["get", "list", "watch"]
+    resources: ["pods", "services", "endpoints", "configmaps", "serviceaccounts"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: chain-reaction-agent-base
+  namespace: chain-reaction
+subjects:
+  - kind: ServiceAccount
+    name: chain-reaction-agent
+    namespace: chain-reaction
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: chain-reaction-agent-base
+---
+# This identity is controller-only. It must not be mounted into an agent Pod.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: chain-reaction-range-controller
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["serviceaccounts", "pods", "services", "secrets", "configmaps", "endpoints"]
+    verbs: ["get", "create", "delete"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings"]
+    verbs: ["get", "create", "delete"]
   - apiGroups: ["networking.k8s.io"]
     resources: ["networkpolicies"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["rbac.authorization.k8s.io"]
-    resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "create", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: chain-reaction-read
+  name: chain-reaction-range-controller
 subjects:
   - kind: ServiceAccount
-    name: chain-reaction
-    namespace: chain-reaction
+    name: chain-reaction-controller
+    namespace: chain-reaction-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: chain-reaction-read
+  name: chain-reaction-range-controller

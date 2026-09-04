@@ -45,7 +45,7 @@ spec:
         heritage: chain-reaction
         chain-reaction.app/mode: validate
     spec:
-      serviceAccountName: chain-reaction
+      serviceAccountName: chain-reaction-agent
       restartPolicy: Never
       containers:
         - name: chain-reaction

@@ -211,7 +211,7 @@ Verification recorded 2026-09-03:
 
 ## WORK-003: Enforce agent, controller, and oracle privilege separation
 
-Status: Open  
+Status: In progress - static deployment identities are separated; controller attestation, generated scenario RBAC, and negative visibility tests remain  
 Priority: P0  
 Linear: CR-282
 

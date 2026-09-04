@@ -3,6 +3,7 @@
 bin/
 artifacts/
 benchmark-private/
+temp/
 coverage.out
 demo-output/
 *.log
