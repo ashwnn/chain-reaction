@@ -113,11 +113,22 @@ comments, branches, pull requests, and commits have been reviewed.
 
 ## Recovery search
 
-`main` has no additional local or remote branches and no registered Git
-worktrees. Unreachable Git objects contain only legacy Goat scenario/runbook
-material, not v2 contracts, generators, claims, or an oracle. A separately
-owned `E:\Projects\school\chain-reaction-old` checkout has not been treated as
-recovered work because its Git ownership cannot be verified by this account.
+The current repository has only `origin/main`, no open GitHub pull requests,
+and no registered Git worktrees. Its unreachable Git objects contain only
+legacy Goat scenario/runbook material, not v2 contracts, generators, claims,
+or an oracle.
+
+The separately owned `E:\Projects\school\chain-reaction-old` checkout was
+inspected read-only with a command-scoped Git trust exception that was not
+persisted. Its `main` is 241 commits ahead of `origin/main`, with HEAD
+`48a47eb` tagged `submission-v1.1`, and it also contains `submission` and
+`origin/submission`. That history contains v1 catalog, tooling, and artifact
+material. Its former current-state document and baseline explicitly describe a
+manual Goat v2 baseline without an authoritative per-scenario manifest.
+Searches found no typed semantic claim, scenario-contract repository,
+generator, oracle, hidden benchmark, replay pipeline, or CR-253 through
+CR-275 history. No old commit is eligible for recovery into the v2 primary
+path; the checkout remains only historical v1 calibration evidence.
 
 ## v1 and v2 boundary
 
