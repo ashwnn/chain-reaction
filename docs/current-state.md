@@ -1,6 +1,6 @@
 # Current implementation state
 
-Status: provisional repository evidence inventory
+Status: repository evidence inventory, updated through WORK-001
 
 Reviewed commit: `cfbfbb68d8472fb51fdd748d2666264d73ac6048` (`main`, 2026-09-03)
 
@@ -19,7 +19,7 @@ credentials, or evaluation artifacts are recorded here.
 | Claim | Status | Implementation evidence | Test or artifact evidence | Introduced in |
 | --- | --- | --- | --- | --- |
 | Go command builds and passes vet | implemented | `cmd/chain-reaction`, all packages | `go build ./cmd/chain-reaction` and `go vet ./...` passed on 2026-09-03 | `729163f`, `eb34441` |
-| Planner mode configuration | implemented, legacy/calibration-oriented | `internal/config/config.go`, `internal/agent/validation.go` | `internal/config/validation_test.go`, `internal/agent/planner_observations_test.go` | `729163f` |
+| Planner mode configuration | implemented, blind by default | `internal/config/config.go`, `internal/agent/validation.go`, `internal/agent/state.go` | `internal/config/validation_test.go`, `internal/agent/planner_observations_test.go` | `729163f`, `dec2bf0` |
 | Blind-mode prompt filtering and bounded observation rendering | implemented, partial | `internal/agent/planner_observations.go`, `internal/agent/planner_react.go` | `internal/agent/planner_observations_test.go` | `729163f` |
 | Kubernetes Goat catalog-family matcher | implemented as v1 | `internal/baseline/catalog.go`, `internal/baseline/matcher.go` | `internal/baseline/matcher_test.go`; five overlapping catalog families | `729163f` |
 | Resource-specific semantic `ValidationClaim` | absent | No `ValidationClaim` type or versioned claim schema exists on `main`. | No claim-schema tests or artifacts exist. | unverified |
@@ -34,7 +34,7 @@ credentials, or evaluation artifacts are recorded here.
 | Independent repeated scenario instances | absent | `scripts/run-reproducibility.sh` runs all five families together, then creates per-family symlink views. | Per-family views are not independent runs. | `eb34441` |
 | Controlled evaluation matrix and paired analysis | absent | No versioned matrix manifest, hidden-run index, eligibility gate, or paired v2 analysis exists. | Existing analysis is legacy catalog-family output. | `729163f`, `eb34441` |
 
-## Verified baseline
+## Baseline and current verification
 
 The following checks passed against the reviewed commit:
 
@@ -43,8 +43,8 @@ go build ./cmd/chain-reaction
 go vet ./...
 ```
 
-The branch is not green. The following 12 known failures were reproduced in
-`internal/agent` on 2026-09-03:
+At the reviewed commit, the following 12 `internal/agent` failures were
+reproduced:
 
 ```text
 TestReactValidationPlannerUsesPromptModule
@@ -61,10 +61,25 @@ TestValidationFinalAnswerRejectedWhenOnlyKG005S3BlockedByRBAC
 TestValidationAllFamiliesValidatedEarlyStop
 ```
 
-These failures divide into prompt-contract drift, final-answer and
+These failures divided into prompt-contract drift, final-answer and
 early-termination semantics, candidate-step metadata, and debug-event
-expectations. They must be classified under WORK-001 before changing tests or
-implementation.
+expectations. WORK-001 resolved them in `dec2bf0` by making blind mode the
+internal default, requiring Goat-hinted fixtures to opt in, and pinning the
+mode-specific prompt contract.
+
+The current worktree passed:
+
+```text
+gofmt -l .
+go test -count=1 ./...
+go vet ./...
+go build -o NUL ./cmd/chain-reaction
+go test -count=20 ./internal/agent -run Test(BlindPlannerObservationsAreBoundedAndRedacted|BlindPlannerSummaryOmitsCatalogProgress|BlindGoalAndPromptAuditRejectCatalogCanary|ValidationFinalAnswerPath|ValidationFinalAnswerRejectedWhenKG005S3Unmet)
+```
+
+Race testing is blocked locally: `CGO_ENABLED=0`, and enabling it fails because
+`gcc` is unavailable on `PATH`. It remains required in CI or a Windows toolchain
+with a C compiler.
 
 ## Linear reconciliation ledger
 
