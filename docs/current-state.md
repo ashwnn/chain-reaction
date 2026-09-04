@@ -1,6 +1,6 @@
 # Current implementation state
 
-Status: repository evidence inventory, updated through WORK-000 and WORK-001
+Status: repository evidence inventory, updated through WORK-002 contract foundation
 
 Reviewed commit: `cfbfbb68d8472fb51fdd748d2666264d73ac6048` (`main`, 2026-09-03)
 
@@ -29,7 +29,8 @@ credentials, or evaluation artifacts are recorded here.
 | Centralized immutable pre-I/O policy | absent | `internal/guardrails/enforcer.go` provides namespace and rate checks only. Tools retain their own defaults and policy-like inputs. | No policy canonicalization, DNS, destination, or fuzz suite exists. | unverified |
 | Secret-read policy boundary | unsafe legacy behavior | `internal/tools/validation/read_secret.go` defaults namespace after runner checks and accepts model-controlled `allow_namespaces`. | Existing tests do not prove immutable operator policy. | `729163f` |
 | Restricted agent and privileged controller identities | absent | `deploy/rbac.yaml` binds the agent ServiceAccount to a cluster-wide read ClusterRole, including Secrets and RBAC resources. | No controller/agent visibility or permission-attestation test exists. | `eb34441` |
-| Hidden parameterized benchmark v2 | absent | No scenario-manifest, generator, commitment, controller-only range, or oracle package exists on `main`. | No public-fixture determinism or kind positive/blocked matrix exists. | unverified |
+| Benchmark v2 contracts and public commitments | implemented, controller-only foundation | `internal/benchmark` defines strict scenario, oracle, run, and public-commitment contracts with canonical hashing and seed derivation. | `internal/benchmark/contracts_test.go` | pending local commit |
+| Hidden parameterized benchmark v2 | partial | Contract foundation exists, but no generator, hidden range, controller lifecycle, or executable oracle exists. | Contract tests cover strict decoding, tampering prerequisites, canonical hashing, projection binding, and seed derivation. | pending local commit |
 | Deterministic replay | absent | No `replay` command or production replay path exists. | No replay golden or tamper-rejection suite exists. | unverified |
 | Independent repeated scenario instances | absent | `scripts/run-reproducibility.sh` runs all five families together, then creates per-family symlink views. | Per-family views are not independent runs. | `eb34441` |
 | Controlled evaluation matrix and paired analysis | absent | No versioned matrix manifest, hidden-run index, eligibility gate, or paired v2 analysis exists. | Existing analysis is legacy catalog-family output. | `729163f`, `eb34441` |
@@ -96,7 +97,7 @@ evidence recorded in Linear.
 | CR-253 | No benchmark v2 contract, generator, or commitment implementation found. | reopened |
 | CR-254 | No deterministic semantic oracle or controller-only oracle configuration found. | reopened |
 | CR-255 | No versioned `ValidationClaim` or exact resource/actor/effect predicate system found. | reopened |
-| CR-259 | No versioned scenario-manifest contract found. | reopened |
+| CR-259 | Strict controller-only v2 contracts now exist locally; generation and scoring remain absent. | in progress |
 | CR-260 | No hidden-instance generator or public seed-commitment artifact found. | reopened |
 | CR-261 | No controller-only hidden range setup or teardown contract found. | reopened |
 | CR-262 | No immutable oracle result or predicate-level output found. | reopened |

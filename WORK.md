@@ -153,7 +153,7 @@ Verification recorded 2026-09-03:
 
 ## WORK-002: Recover or implement benchmark v2 and its deterministic oracle
 
-Status: Open
+Status: In progress - contract foundation implemented; generator, oracle, and Kind lifecycle remain
 Priority: P0  
 Linear: CR-253, CR-254, CR-259, CR-260, CR-261, CR-262
 
