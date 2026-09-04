@@ -51,12 +51,19 @@ Raw seeds must remain in controller-only storage outside this repository.
 rejection sampling, so they do not embed raw seed or scope text and avoid modulo
 bias.
 
+`WritePrivateSeed` refuses unsafe identifiers, symlink directories, and
+overwrites. It creates owner-only storage where the host supports POSIX modes.
+`BuildCommitmentManifest` and `WritePublicCommitmentManifest` emit only the
+public commitment shape, sort entries, and refuse to replace an existing
+pre-evaluation inventory. `benchmark-private/` is ignored as a defense in
+depth measure; controller deployments should use storage outside the checkout.
+
 ## Current limits
 
 The contract generator creates deterministic controller-only contract pairs for
 eight archetype shapes and one declared positive/blocked control. Its in-memory
 renderer creates the Namespace, ServiceAccount, Role, conditional RoleBinding,
 workload, Secret, Service, Endpoints, decoy, and conditional NetworkPolicy
-objects in stable order. It does not provision a cluster, store hidden seeds,
-score evidence, or perform Kind setup and teardown. Those capabilities remain
+objects in stable order. It does not provision a cluster, score evidence, or
+perform Kind setup and teardown. Those capabilities remain
 required before benchmark v2 results may be reported.
