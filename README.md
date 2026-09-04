@@ -20,15 +20,15 @@ flowchart LR
         plan --> enforce["Apply guardrails<br/>scope, rate, time, step limits"]
         enforce --> probe["Run one registered probe<br/>Kubernetes API, RBAC, secret, token, network"]
         probe --> observe["Record observations<br/>snapshots, evidence, failure reasons"]
-        observe --> graph["Update phase-labeled<br/>attack graph and metrics"]
-        graph -. next observation .-> plan
+        observe --> attackGraph["Update phase-labeled<br/>attack graph and metrics"]
+        attackGraph -. next observation .-> plan
     end
 
     probe --> api["Kubernetes API and<br/>in-scope cluster resources"]
     api -. result .-> observe
     observe --> artifacts["Evidence bundle<br/>snapshots, evidence.jsonl, graph, metrics"]
     enforce -->|"blocked"| stopped["Stop with recorded reason"]
-    graph --> result["validated, theoretical,<br/>failed, or failed_rbac"]
+    attackGraph --> result["validated, theoretical,<br/>failed, or failed_rbac"]
 
     classDef input fill:#000000,stroke:#566F87,color:#DED8D1,stroke-width:2px;
     classDef action fill:#0C447C,stroke:#497EB3,color:#DED8D1,stroke-width:2px;
@@ -41,7 +41,7 @@ flowchart LR
     class discover,probe,api action;
     class plan planner;
     class enforce guard;
-    class observe,graph,artifacts,result evidence;
+    class observe,attackGraph,artifacts,result evidence;
     class stopped stop;
 ```
 
