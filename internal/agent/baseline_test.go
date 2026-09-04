@@ -720,8 +720,10 @@ func runBaselineForTest(t *testing.T, opts ...baselineTestOption) (RunResult, st
 		OutputPath:          tmpDir,
 		TimeBudget:          time.Minute,
 		AllowListNamespaces: []string{"team-a"},
-		QPS:                 1,
-		Burst:               1,
+		// Baseline discovery exercises the complete tool set. Use a high test-only
+		// budget so contract tests do not wait on the production rate limiter.
+		QPS:   10000,
+		Burst: 10000,
 	}
 	for _, opt := range opts {
 		opt(&cfg)

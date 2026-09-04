@@ -61,8 +61,10 @@ func (s *state) appendHistory(entry historyEntry) {
 func plannerModeFromState(s *state) config.PlannerMode {
 	if s != nil && s.Context != nil {
 		if mode, ok := s.Context["planner_mode"].(config.PlannerMode); ok {
-			return mode
+			if mode != "" {
+				return mode
+			}
 		}
 	}
-	return config.PlannerModeGoatHinted
+	return config.PlannerModeBlind
 }

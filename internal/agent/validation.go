@@ -182,6 +182,10 @@ func runValidationLoopWithEvaluator(
 	evaluator stepOutcomeEvaluator,
 	debugLogger *validationEventLogger,
 ) (ValidationResult, error) {
+	if cfg.PlannerMode == "" {
+		cfg.PlannerMode = config.PlannerModeBlind
+	}
+
 	ownsDebugLogger := false
 	if debugLogger == nil {
 		var err error

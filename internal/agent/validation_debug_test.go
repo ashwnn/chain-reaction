@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ashwnn/chain-reaction/internal/config"
 	"github.com/ashwnn/chain-reaction/internal/llm"
 )
 
@@ -20,7 +21,7 @@ func TestRunValidationLoopWritesDebugLogArtifact(t *testing.T) {
 		},
 	}
 
-	result, err := runValidationLoopForTest(t, planner)
+	result, err := runValidationLoopForTest(t, planner, withValidationPlannerMode(config.PlannerModeGoatHinted))
 	if err != nil {
 		t.Fatalf("runValidationLoopForTest returned error: %v", err)
 	}
