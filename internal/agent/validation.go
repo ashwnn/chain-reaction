@@ -76,6 +76,10 @@ func canonicalizePolicyAction(action plannerAction) (plannerAction, error) {
 	return action, nil
 }
 
+func validationActionID(sequence int) string {
+	return fmt.Sprintf("validation-action-%06d", sequence)
+}
+
 type deterministicValidationPlanner struct{}
 
 func (p *deterministicValidationPlanner) NextAction(_ context.Context, state *state, availableTools []string) (plannerAction, error) {
@@ -235,6 +239,7 @@ func runValidationLoopWithEvaluator(
 	availableTools := registry.Names()
 	sort.Strings(availableTools)
 	trace := make([]toolExecutionResult, 0)
+	actionSequence := 0
 	snapshotEntries := make([]evidence.SnapshotIndexEntry, 0)
 	toolSet := map[string]struct{}{}
 	namespaceSet := map[string]struct{}{}
@@ -332,6 +337,8 @@ func runValidationLoopWithEvaluator(
 			return ValidationResult{}, err
 		}
 		action = canonicalAction
+		actionSequence++
+		actionID := validationActionID(actionSequence)
 		if namespace, ok := action.Parameters["namespace"].(string); ok && namespace != "" {
 			if err := enforcer.CheckNamespace(namespace); err != nil {
 				debugLogger.Log("guardrail_namespace_denied", map[string]any{
@@ -384,11 +391,13 @@ func runValidationLoopWithEvaluator(
 		execStart := time.Now().UTC()
 		output, err := tool.Run(ctx, action.Parameters)
 		execResult := toolExecutionResult{
-			ToolName:     action.ToolName,
-			Input:        action.Parameters,
-			Timestamp:    execStart,
-			DurationMS:   time.Since(execStart).Milliseconds(),
-			PlannerUsage: action.Usage,
+			ActionID:       actionID,
+			ActionSequence: actionSequence,
+			ToolName:       action.ToolName,
+			Input:          action.Parameters,
+			Timestamp:      execStart,
+			DurationMS:     time.Since(execStart).Milliseconds(),
+			PlannerUsage:   action.Usage,
 		}
 		if err != nil {
 			logToolError(debugLogger, state, checker, action, err, time.Since(execStart))
@@ -483,6 +492,8 @@ func runValidationLoopWithEvaluator(
 			return ValidationResult{}, fmt.Errorf("write snapshot for %s: %w", action.ToolName, err)
 		}
 		if err := collector.Record("validation_tool_execution", map[string]any{
+			"action_id":                execResult.ActionID,
+			"action_sequence":          execResult.ActionSequence,
 			"tool":                     action.ToolName,
 			"thought":                  action.Thought,
 			"input":                    action.Parameters,
@@ -512,7 +523,11 @@ func runValidationLoopWithEvaluator(
 		state.Context["last_output"] = output
 
 		nodeID := fmt.Sprintf("validation:%s:%d", action.ToolName, state.Iteration)
-		nodeMeta := map[string]any{"tool": action.ToolName}
+		nodeMeta := map[string]any{
+			"action_id":       execResult.ActionID,
+			"action_sequence": execResult.ActionSequence,
+			"tool":            action.ToolName,
+		}
 
 		edgeStatus := edgeStatusFromExecutionResult(execResult)
 

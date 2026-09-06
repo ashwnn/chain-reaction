@@ -25,6 +25,8 @@ type plannerAction struct {
 }
 
 type toolExecutionResult struct {
+	ActionID                string                   `json:"action_id"`
+	ActionSequence          int                      `json:"action_sequence"`
 	ToolName                string                   `json:"tool_name"`
 	Input                   map[string]any           `json:"input,omitempty"`
 	Output                  map[string]any           `json:"output,omitempty"`

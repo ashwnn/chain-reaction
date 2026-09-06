@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -2431,6 +2432,16 @@ func TestValidationTraceOutcomeFields(t *testing.T) {
 	}
 	if len(res.Trace) != 6 {
 		t.Fatalf("expected 6 trace entries, got %d", len(res.Trace))
+	}
+	for i, entry := range res.Trace {
+		wantSequence := i + 1
+		if entry.ActionSequence != wantSequence {
+			t.Fatalf("trace %d action sequence = %d, want %d", i, entry.ActionSequence, wantSequence)
+		}
+		wantID := fmt.Sprintf("validation-action-%06d", wantSequence)
+		if entry.ActionID != wantID {
+			t.Fatalf("trace %d action ID = %q, want %q", i, entry.ActionID, wantID)
+		}
 	}
 
 	// Trace index 0: discovery.list_namespaces — no taxonomy.
