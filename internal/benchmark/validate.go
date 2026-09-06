@@ -88,6 +88,26 @@ func (o OracleContract) Validate() error {
 	if len(o.Predicates) == 0 {
 		return fmt.Errorf("oracle requires predicates")
 	}
+	contexts := make(map[string]ExecutionContext, len(o.ExecutionContexts))
+	for index, executionContext := range o.ExecutionContexts {
+		if err := validateExecutionContext(fmt.Sprintf("execution_contexts[%d]", index), executionContext); err != nil {
+			return err
+		}
+		if _, ok := contexts[executionContext.ID]; ok {
+			return fmt.Errorf("oracle contains duplicate execution context id %q", executionContext.ID)
+		}
+		contexts[executionContext.ID] = executionContext
+	}
+	capabilities := make(map[string]Capability, len(o.InitialCapabilities))
+	for index, capability := range o.InitialCapabilities {
+		if err := validateCapability(fmt.Sprintf("initial_capabilities[%d]", index), capability, contexts); err != nil {
+			return err
+		}
+		if _, ok := capabilities[capability.ID]; ok {
+			return fmt.Errorf("oracle contains duplicate capability id %q", capability.ID)
+		}
+		capabilities[capability.ID] = capability
+	}
 	seen := make(map[string]struct{}, len(o.Predicates))
 	for index, predicate := range o.Predicates {
 		if err := validateIdentifier(fmt.Sprintf("predicates[%d].id", index), predicate.ID); err != nil {
@@ -109,6 +129,23 @@ func (o OracleContract) Validate() error {
 		if err := validateIdentifier(fmt.Sprintf("predicates[%d].expected_effect", index), predicate.ExpectedEffect); err != nil {
 			return err
 		}
+		if predicate.ExecutionContextID != "" {
+			if _, ok := contexts[predicate.ExecutionContextID]; !ok {
+				return fmt.Errorf("predicates[%d] references unknown execution context %q", index, predicate.ExecutionContextID)
+			}
+		}
+		for capabilityIndex, capability := range predicate.Produces {
+			if err := validateCapability(fmt.Sprintf("predicates[%d].produces[%d]", index, capabilityIndex), capability, contexts); err != nil {
+				return err
+			}
+			if predicate.ExecutionContextID != "" && capability.ExecutionContextID != predicate.ExecutionContextID {
+				return fmt.Errorf("predicates[%d].produces[%d] has a different execution context", index, capabilityIndex)
+			}
+			if _, ok := capabilities[capability.ID]; ok {
+				return fmt.Errorf("oracle contains duplicate capability id %q", capability.ID)
+			}
+			capabilities[capability.ID] = capability
+		}
 	}
 	for index, predicate := range o.Predicates {
 		for _, predecessor := range predicate.Predecessors {
@@ -118,6 +155,139 @@ func (o OracleContract) Validate() error {
 			if _, ok := seen[predecessor]; !ok {
 				return fmt.Errorf("predicates[%d] references unknown predecessor %q", index, predecessor)
 			}
+		}
+		for _, capabilityID := range predicate.RequiresAll {
+			if _, ok := capabilities[capabilityID]; !ok {
+				return fmt.Errorf("predicates[%d] requires unknown capability %q", index, capabilityID)
+			}
+		}
+		for groupIndex, alternatives := range predicate.RequiresAny {
+			if len(alternatives) == 0 {
+				return fmt.Errorf("predicates[%d].requires_any[%d] must not be empty", index, groupIndex)
+			}
+			for _, capabilityID := range alternatives {
+				if _, ok := capabilities[capabilityID]; !ok {
+					return fmt.Errorf("predicates[%d].requires_any[%d] references unknown capability %q", index, groupIndex, capabilityID)
+				}
+			}
+		}
+	}
+	if err := validatePredicateDependencyCycles(o.Predicates, o.InitialCapabilities); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a ContextAttestation) valid() bool {
+	return a == ContextAttested || a == ContextObserved || a == ContextUnavailable || a == ContextOutOfScope
+}
+
+func (k CapabilityKind) valid() bool {
+	return k == CapabilityCredentialHandle || k == CapabilityAuthorizedOperation || k == CapabilityWorkloadContext || k == CapabilityAuthenticatedSession
+}
+
+func validateExecutionContext(label string, executionContext ExecutionContext) error {
+	if executionContext.Version != ExecutionContextVersion {
+		return fmt.Errorf("%s.version is unsupported", label)
+	}
+	for field, value := range map[string]string{
+		"id":        executionContext.ID,
+		"container": executionContext.Container,
+	} {
+		if err := validateIdentifier(label+"."+field, value); err != nil {
+			return err
+		}
+	}
+	if err := validateActor(label+".initial_actor", executionContext.InitialActor); err != nil {
+		return err
+	}
+	if err := validateActor(label+".current_actor", executionContext.CurrentActor); err != nil {
+		return err
+	}
+	if err := validateObjectRef(label+".pod", executionContext.Pod); err != nil || executionContext.Pod.Kind != "Pod" || executionContext.Pod.UID == "" {
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("%s.pod must be a UID-bound Pod", label)
+	}
+	if executionContext.Pod.Namespace != executionContext.InitialActor.Namespace || executionContext.Pod.Namespace != executionContext.CurrentActor.Namespace {
+		return fmt.Errorf("%s actors and pod must share a namespace", label)
+	}
+	if !executionContext.IdentityAttestation.valid() || !executionContext.NetworkAttestation.valid() {
+		return fmt.Errorf("%s has an invalid attestation state", label)
+	}
+	return nil
+}
+
+func validateCapability(label string, capability Capability, contexts map[string]ExecutionContext) error {
+	if err := validateIdentifier(label+".id", capability.ID); err != nil {
+		return err
+	}
+	if !capability.Kind.valid() {
+		return fmt.Errorf("%s.kind is invalid", label)
+	}
+	if err := validateActor(label+".actor", capability.Actor); err != nil {
+		return err
+	}
+	context, ok := contexts[capability.ExecutionContextID]
+	if !ok {
+		return fmt.Errorf("%s references unknown execution context %q", label, capability.ExecutionContextID)
+	}
+	if capability.Actor != context.CurrentActor {
+		return fmt.Errorf("%s actor does not match its execution context", label)
+	}
+	return nil
+}
+
+func validatePredicateDependencyCycles(predicates []Predicate, initialCapabilities []Capability) error {
+	producer := make(map[string]string)
+	for _, predicate := range predicates {
+		for _, capability := range predicate.Produces {
+			producer[capability.ID] = predicate.ID
+		}
+	}
+	for _, capability := range initialCapabilities {
+		producer[capability.ID] = ""
+	}
+	dependencies := make(map[string][]string, len(predicates))
+	for _, predicate := range predicates {
+		dependencies[predicate.ID] = append(dependencies[predicate.ID], predicate.Predecessors...)
+		for _, capabilityID := range predicate.RequiresAll {
+			if source := producer[capabilityID]; source != "" {
+				dependencies[predicate.ID] = append(dependencies[predicate.ID], source)
+			}
+		}
+		for _, alternatives := range predicate.RequiresAny {
+			for _, capabilityID := range alternatives {
+				if source := producer[capabilityID]; source != "" {
+					dependencies[predicate.ID] = append(dependencies[predicate.ID], source)
+				}
+			}
+		}
+	}
+	visiting := make(map[string]bool, len(predicates))
+	visited := make(map[string]bool, len(predicates))
+	var visit func(string) error
+	visit = func(id string) error {
+		if visiting[id] {
+			return fmt.Errorf("oracle contains cyclic predicate dependencies involving %q", id)
+		}
+		if visited[id] {
+			return nil
+		}
+		visiting[id] = true
+		for _, dependency := range dependencies[id] {
+			if err := visit(dependency); err != nil {
+				return err
+			}
+		}
+		visiting[id] = false
+		visited[id] = true
+		return nil
+	}
+	for _, predicate := range predicates {
+		if err := visit(predicate.ID); err != nil {
+			return err
 		}
 	}
 	return nil

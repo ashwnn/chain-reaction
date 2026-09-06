@@ -21,6 +21,8 @@ const (
 	DigestAlgorithmSHA = "sha256"
 )
 
+const ExecutionContextVersion = "benchmark.execution-context.v1"
+
 type Split string
 
 const (
@@ -59,6 +61,51 @@ type Actor struct {
 	Name      string          `json:"name"`
 	UID       string          `json:"uid,omitempty"`
 	Profile   IdentityProfile `json:"profile"`
+}
+
+// ContextAttestation describes whether a context property was independently
+// attested, observed without authentication proof, unavailable, or out of scope.
+type ContextAttestation string
+
+const (
+	ContextAttested    ContextAttestation = "attested"
+	ContextObserved    ContextAttestation = "observed"
+	ContextUnavailable ContextAttestation = "unavailable"
+	ContextOutOfScope  ContextAttestation = "out_of_scope"
+)
+
+// ExecutionContext records the authenticated actor and the workload vantage for
+// a transition. It deliberately contains no token, session, or Secret material.
+type ExecutionContext struct {
+	Version             string             `json:"version"`
+	ID                  string             `json:"id"`
+	InitialActor        Actor              `json:"initial_actor"`
+	CurrentActor        Actor              `json:"current_actor"`
+	Pod                 ObjectRef          `json:"pod"`
+	Container           string             `json:"container"`
+	Node                string             `json:"node,omitempty"`
+	NetworkVantage      string             `json:"network_vantage,omitempty"`
+	IdentityAttestation ContextAttestation `json:"identity_attestation"`
+	NetworkAttestation  ContextAttestation `json:"network_attestation"`
+}
+
+// CapabilityKind identifies a non-secret capability that a transition may
+// produce or consume. Raw credentials remain executor-only.
+type CapabilityKind string
+
+const (
+	CapabilityCredentialHandle     CapabilityKind = "credential_handle"
+	CapabilityAuthorizedOperation  CapabilityKind = "authorized_operation"
+	CapabilityWorkloadContext      CapabilityKind = "workload_execution_context"
+	CapabilityAuthenticatedSession CapabilityKind = "authenticated_session"
+)
+
+// Capability is a typed handle bound to an actor and execution context.
+type Capability struct {
+	ID                 string         `json:"id"`
+	Kind               CapabilityKind `json:"kind"`
+	Actor              Actor          `json:"actor"`
+	ExecutionContextID string         `json:"execution_context_id"`
 }
 
 // ProofAction is an allow-listed, bounded controller-approved proof action.
@@ -111,19 +158,25 @@ type ScenarioManifest struct {
 // Predicate is a controller-only machine predicate. Predicate details are not
 // suitable for planner-visible output.
 type Predicate struct {
-	ID             string    `json:"id"`
-	Actor          Actor     `json:"actor"`
-	ActionID       string    `json:"action_id"`
-	Target         ObjectRef `json:"target"`
-	ExpectedEffect string    `json:"expected_effect"`
-	Predecessors   []string  `json:"predecessors,omitempty"`
+	ID                 string       `json:"id"`
+	Actor              Actor        `json:"actor"`
+	ActionID           string       `json:"action_id"`
+	Target             ObjectRef    `json:"target"`
+	ExpectedEffect     string       `json:"expected_effect"`
+	Predecessors       []string     `json:"predecessors,omitempty"`
+	ExecutionContextID string       `json:"execution_context_id,omitempty"`
+	Produces           []Capability `json:"produces,omitempty"`
+	RequiresAll        []string     `json:"requires_all,omitempty"`
+	RequiresAny        [][]string   `json:"requires_any,omitempty"`
 }
 
 // OracleContract is controller-only and scored only after the run has ended.
 type OracleContract struct {
-	Version        string      `json:"version"`
-	ScenarioDigest string      `json:"scenario_digest"`
-	Predicates     []Predicate `json:"predicates"`
+	Version             string             `json:"version"`
+	ScenarioDigest      string             `json:"scenario_digest"`
+	ExecutionContexts   []ExecutionContext `json:"execution_contexts,omitempty"`
+	InitialCapabilities []Capability       `json:"initial_capabilities,omitempty"`
+	Predicates          []Predicate        `json:"predicates"`
 }
 
 // PublicCommitment is safe to publish before evaluation. Its shape intentionally

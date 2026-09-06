@@ -13,7 +13,11 @@ import (
 type EdgeStatus string
 
 const (
-	EdgeValidated   EdgeStatus = "validated"
+	EdgeValidated EdgeStatus = "validated"
+	// EdgeObserved records a completed tool action whose result was not classified
+	// as validated, theoretical, or failed. It is retained for auditability but
+	// never contributes validation credit.
+	EdgeObserved    EdgeStatus = "observed"
 	EdgeTheoretical EdgeStatus = "theoretical"
 	EdgeFailedRBAC  EdgeStatus = "failed_rbac"
 
@@ -119,6 +123,8 @@ func dotStyle(s EdgeStatus) (color, style string) {
 	switch s {
 	case EdgeValidated:
 		return "#0072B2", "solid"
+	case EdgeObserved:
+		return "#666666", "dotted"
 	case EdgeTheoretical:
 		return "#999999", "dashed"
 	case EdgeFailedRBAC:

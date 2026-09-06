@@ -197,7 +197,7 @@ func TestValidationGraphSecretMapping(t *testing.T) {
 	// Register a dynamic fake tool that lets us mock read_secret outcomes
 	responses := []map[string]any{
 		{"status": "failed", "reason": "rbac_denied", "name": "forbidden-secret"},
-		{"status": "success", "name": "allowed-secret", "value": "top-secret"},
+		{"status": string(validation.StepValidated), "name": "allowed-secret", "value": "top-secret"},
 	}
 	callCount := 0
 
@@ -355,6 +355,55 @@ func TestValidationGraphCheckPermissionsDeniedMapping(t *testing.T) {
 	// The core assertion: denied permission check must map to EdgeFailedRBAC
 	if ag.Edges[0].Status != graph.EdgeFailedRBAC {
 		t.Errorf("expected EdgeFailedRBAC for denied permission check, got %s", ag.Edges[0].Status)
+	}
+}
+
+func TestValidationLoopUnclassifiedResultIsObserved(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := config.Config{OutputPath: tmpDir, TimeBudget: time.Minute, MaxSteps: 2}
+	registry := tools.NewRegistry()
+	if err := registry.Register(fakeTool{
+		name: "validation.read_secret",
+		run: func(context.Context, map[string]any) (map[string]any, error) {
+			return map[string]any{"unexpected": "unclassified"}, nil
+		},
+	}); err != nil {
+		t.Fatalf("register tool: %v", err)
+	}
+	collector, err := evidence.NewCollector(filepath.Join(tmpDir, "evidence"))
+	if err != nil {
+		t.Fatalf("create collector: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := collector.Close(); err != nil {
+			t.Fatalf("close collector: %v", err)
+		}
+	})
+
+	result, err := runValidationLoop(
+		context.Background(), cfg, time.Now().UTC(), guardrails.New(nil, cfg.QPS, cfg.Burst),
+		collector, evidence.NewSnapshotWriter(filepath.Join(tmpDir, "evidence")), registry,
+		&stubValidationPlanner{actions: []plannerAction{
+			{ActionType: actionTypeExecute, ToolName: "validation.read_secret"},
+			{ActionType: actionTypeFinalAnswer, FinalAnswer: "done"},
+		}},
+	)
+	if err != nil {
+		t.Fatalf("run validation loop: %v", err)
+	}
+	graphData, err := os.ReadFile(result.GraphPath)
+	if err != nil {
+		t.Fatalf("read graph: %v", err)
+	}
+	var attackGraph graph.AttackGraph
+	if err := json.Unmarshal(graphData, &attackGraph); err != nil {
+		t.Fatalf("unmarshal graph: %v", err)
+	}
+	if len(attackGraph.Edges) != 1 {
+		t.Fatalf("expected one edge, got %d", len(attackGraph.Edges))
+	}
+	if attackGraph.Edges[0].Status != graph.EdgeObserved {
+		t.Fatalf("unclassified execution must be observed, got %q", attackGraph.Edges[0].Status)
 	}
 }
 

@@ -145,6 +145,77 @@ func TestOracleRejectsUnknownPredecessor(t *testing.T) {
 	}
 }
 
+func TestOracleCapabilityContractAllowsIndependentPrerequisites(t *testing.T) {
+	actor := Actor{Namespace: "range-a", Name: "agent", Profile: IdentityLeastPrivilege}
+	executionContext := ExecutionContext{
+		Version:             ExecutionContextVersion,
+		ID:                  "agent-pod",
+		InitialActor:        actor,
+		CurrentActor:        actor,
+		Pod:                 ObjectRef{APIVersion: "v1", Kind: "Pod", Namespace: "range-a", Name: "agent-pod", UID: "pod-uid"},
+		Container:           "agent",
+		IdentityAttestation: ContextAttested,
+		NetworkAttestation:  ContextObserved,
+	}
+	oracle := OracleContract{
+		Version:           OracleVersion,
+		ScenarioDigest:    testDigest,
+		ExecutionContexts: []ExecutionContext{executionContext},
+		InitialCapabilities: []Capability{{
+			ID: "initial-session", Kind: CapabilityAuthenticatedSession, Actor: actor, ExecutionContextID: executionContext.ID,
+		}},
+		Predicates: []Predicate{
+			{
+				ID: "independent-a", Actor: actor, ActionID: "read-a", Target: ObjectRef{APIVersion: "v1", Kind: "ConfigMap", Namespace: "range-a", Name: "a"}, ExpectedEffect: "read", ExecutionContextID: executionContext.ID,
+				RequiresAll: []string{"initial-session"}, Produces: []Capability{{ID: "cap-a", Kind: CapabilityAuthorizedOperation, Actor: actor, ExecutionContextID: executionContext.ID}},
+			},
+			{
+				ID: "independent-b", Actor: actor, ActionID: "read-b", Target: ObjectRef{APIVersion: "v1", Kind: "ConfigMap", Namespace: "range-a", Name: "b"}, ExpectedEffect: "read", ExecutionContextID: executionContext.ID,
+				RequiresAll: []string{"initial-session"}, Produces: []Capability{{ID: "cap-b", Kind: CapabilityAuthorizedOperation, Actor: actor, ExecutionContextID: executionContext.ID}},
+			},
+			{
+				ID: "goal", Actor: actor, ActionID: "read-goal", Target: ObjectRef{APIVersion: "v1", Kind: "Secret", Namespace: "range-a", Name: "goal"}, ExpectedEffect: "read", ExecutionContextID: executionContext.ID,
+				RequiresAll: []string{"cap-a", "cap-b"},
+			},
+		},
+	}
+	if err := oracle.Validate(); err != nil {
+		t.Fatalf("valid capability contract rejected: %v", err)
+	}
+}
+
+func TestOracleCapabilityContractRejectsCyclesAndWrongContext(t *testing.T) {
+	actor := Actor{Namespace: "range-a", Name: "agent", Profile: IdentityLeastPrivilege}
+	oracle := OracleContract{
+		Version:        OracleVersion,
+		ScenarioDigest: testDigest,
+		ExecutionContexts: []ExecutionContext{{
+			Version: ExecutionContextVersion, ID: "agent-pod", InitialActor: actor, CurrentActor: actor,
+			Pod: ObjectRef{APIVersion: "v1", Kind: "Pod", Namespace: "range-a", Name: "agent-pod", UID: "pod-uid"}, Container: "agent",
+			IdentityAttestation: ContextAttested, NetworkAttestation: ContextObserved,
+		}},
+		Predicates: []Predicate{
+			{
+				ID: "a", Actor: actor, ActionID: "a", Target: ObjectRef{APIVersion: "v1", Kind: "ConfigMap", Namespace: "range-a", Name: "a"}, ExpectedEffect: "read", ExecutionContextID: "agent-pod",
+				RequiresAll: []string{"cap-b"}, Produces: []Capability{{ID: "cap-a", Kind: CapabilityAuthorizedOperation, Actor: actor, ExecutionContextID: "agent-pod"}},
+			},
+			{
+				ID: "b", Actor: actor, ActionID: "b", Target: ObjectRef{APIVersion: "v1", Kind: "ConfigMap", Namespace: "range-a", Name: "b"}, ExpectedEffect: "read", ExecutionContextID: "agent-pod",
+				RequiresAll: []string{"cap-a"}, Produces: []Capability{{ID: "cap-b", Kind: CapabilityAuthorizedOperation, Actor: actor, ExecutionContextID: "agent-pod"}},
+			},
+		},
+	}
+	if err := oracle.Validate(); err == nil || !strings.Contains(err.Error(), "cyclic") {
+		t.Fatalf("cyclic capability contract accepted: %v", err)
+	}
+	oracle.Predicates[0].RequiresAll = nil
+	oracle.Predicates[1].RequiresAll = nil
+	oracle.Predicates[1].ExecutionContextID = "wrong-pod"
+	if err := oracle.Validate(); err == nil || !strings.Contains(err.Error(), "unknown execution context") {
+		t.Fatalf("wrong execution context accepted: %v", err)
+	}
+}
+
 func TestFinalizeScenarioOracleBindsDocumentedProjection(t *testing.T) {
 	manifest := validScenario()
 	oracle := OracleContract{

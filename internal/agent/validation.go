@@ -479,9 +479,6 @@ func runValidationLoopWithEvaluator(
 		nodeMeta := map[string]any{"tool": action.ToolName}
 
 		edgeStatus := edgeStatusFromExecutionResult(execResult)
-		if edgeStatus == "" {
-			edgeStatus = graph.EdgeValidated
-		}
 
 		switch action.ToolName {
 		case "validation.read_secret":

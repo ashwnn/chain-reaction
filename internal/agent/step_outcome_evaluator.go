@@ -257,6 +257,6 @@ func edgeStatusFromExecutionResult(result toolExecutionResult) graph.EdgeStatus 
 		}
 		return graph.EdgeFailed
 	default:
-		return ""
+		return graph.EdgeObserved
 	}
 }
