@@ -56,12 +56,13 @@ func (w *SnapshotWriter) WriteSnapshot(toolName string, data interface{}) (strin
 		return "", fmt.Errorf("create snapshot directory: %w", err)
 	}
 
+	redactedData := RedactValue(data)
 	snapshot := SnapshotEnvelope{
 		CollectedAt: now,
 		ToolName:    toolName,
-		Namespace:   extractNamespace(data),
-		ItemCount:   computeItemCount(data),
-		Items:       data,
+		Namespace:   extractNamespace(redactedData),
+		ItemCount:   computeItemCount(redactedData),
+		Items:       redactedData,
 	}
 
 	body, err := json.Marshal(snapshot)

@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"unicode"
+
+	"github.com/ashwnn/chain-reaction/internal/evidence"
 )
 
 const plannerObservationContract = "planner.observations.v1"
@@ -58,7 +60,7 @@ func sanitizeObservationValue(value any, depth int) any {
 	case nil:
 		return nil
 	case string:
-		return boundedText(v)
+		return boundedText(evidence.RedactString(v))
 	case bool, float64, float32, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		return v
 	case []any:
@@ -83,7 +85,7 @@ func sanitizeObservationValue(value any, depth int) any {
 			if i == maxObservationKeys {
 				break
 			}
-			if isSensitiveObservationKey(key) {
+			if evidence.IsSensitiveKey(key) {
 				out[boundedText(key)] = "[redacted]"
 				continue
 			}
@@ -129,14 +131,4 @@ func auditBlindPlannerPrompt(content string) error {
 		}
 	}
 	return nil
-}
-
-func isSensitiveObservationKey(key string) bool {
-	key = strings.ToLower(key)
-	for _, token := range []string{"token", "secret", "password", "credential", "authorization", "data"} {
-		if strings.Contains(key, token) {
-			return true
-		}
-	}
-	return false
 }

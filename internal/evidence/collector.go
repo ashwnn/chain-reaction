@@ -71,10 +71,11 @@ func (c *Collector) Record(step string, data map[string]any) error {
 	}
 	defer f.Close()
 
+	redactedData, _ := RedactValue(data).(map[string]any)
 	rec := Record{
 		Timestamp: time.Now().UTC(),
 		Step:      step,
-		Data:      data,
+		Data:      redactedData,
 		Sequence:  c.sequence + 1,
 		PrevHash:  c.lastHash,
 	}
