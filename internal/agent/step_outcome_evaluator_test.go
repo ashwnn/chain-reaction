@@ -245,7 +245,7 @@ func TestValidationLoopWithEvaluatorRecordsClassificationAndUsesItForGraph(t *te
 	if len(records) < 2 {
 		t.Fatalf("expected at least 2 evidence records, got %d", len(records))
 	}
-	stepRecord := records[0]
+	stepRecord := findEvidenceRecord(t, records, "validation_tool_execution")
 	if stepRecord.Data["evaluator_classification"] != "theoretical" {
 		t.Fatalf("expected evaluator classification on first evidence record, got %#v", stepRecord.Data["evaluator_classification"])
 	}

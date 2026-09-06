@@ -80,6 +80,22 @@ func validationActionID(sequence int) string {
 	return fmt.Sprintf("validation-action-%06d", sequence)
 }
 
+func recordPolicyDecision(collector *evidence.Collector, action plannerAction, actionID string, actionSequence int, stage string, allowed bool, decisionErr error) error {
+	data := map[string]any{
+		"action_id":       actionID,
+		"action_sequence": actionSequence,
+		"action_type":     action.ActionType,
+		"allowed":         allowed,
+		"parameters":      action.Parameters,
+		"policy_stage":    stage,
+		"tool_name":       action.ToolName,
+	}
+	if decisionErr != nil {
+		data["error"] = decisionErr.Error()
+	}
+	return collector.Record("policy_decision", data)
+}
+
 type deterministicValidationPlanner struct{}
 
 func (p *deterministicValidationPlanner) NextAction(_ context.Context, state *state, availableTools []string) (plannerAction, error) {
@@ -277,7 +293,12 @@ func runValidationLoopWithEvaluator(
 			return ValidationResult{}, fmt.Errorf("plan next action: %w", err)
 		}
 		logPlannerRequestComplete(debugLogger, state, checker, action, time.Since(plannerStart))
+		actionSequence++
+		actionID := validationActionID(actionSequence)
 		if err := action.Validate(availableTools); err != nil {
+			if recordErr := recordPolicyDecision(collector, action, actionID, actionSequence, "action_validation", false, err); recordErr != nil {
+				return ValidationResult{}, fmt.Errorf("record policy decision: %w", recordErr)
+			}
 			debugLogger.Log("planner_action_invalid", map[string]any{
 				"error":     err.Error(),
 				"iteration": state.Iteration + 1,
@@ -310,9 +331,11 @@ func runValidationLoopWithEvaluator(
 			finalAnswerUsage = action.Usage
 			state.Context["goal_achieved"] = true
 			if err := collector.Record("validation_final_answer", map[string]any{
-				"final_answer":  finalAnswer,
-				"steps":         state.Iteration,
-				"planner_usage": action.Usage,
+				"action_id":       actionID,
+				"action_sequence": actionSequence,
+				"final_answer":    finalAnswer,
+				"steps":           state.Iteration,
+				"planner_usage":   action.Usage,
 			}); err != nil {
 				debugLogger.Log("final_answer_record_error", map[string]any{
 					"error":     err.Error(),
@@ -329,6 +352,9 @@ func runValidationLoopWithEvaluator(
 
 		canonicalAction, err := canonicalizePolicyAction(action)
 		if err != nil {
+			if recordErr := recordPolicyDecision(collector, action, actionID, actionSequence, "canonicalization", false, err); recordErr != nil {
+				return ValidationResult{}, fmt.Errorf("record policy decision: %w", recordErr)
+			}
 			debugLogger.Log("guardrail_canonicalization_denied", map[string]any{
 				"error":     err.Error(),
 				"iteration": state.Iteration + 1,
@@ -337,10 +363,14 @@ func runValidationLoopWithEvaluator(
 			return ValidationResult{}, err
 		}
 		action = canonicalAction
-		actionSequence++
-		actionID := validationActionID(actionSequence)
+		if err := recordPolicyDecision(collector, action, actionID, actionSequence, "canonicalization", true, nil); err != nil {
+			return ValidationResult{}, fmt.Errorf("record policy decision: %w", err)
+		}
 		if namespace, ok := action.Parameters["namespace"].(string); ok && namespace != "" {
 			if err := enforcer.CheckNamespace(namespace); err != nil {
+				if recordErr := recordPolicyDecision(collector, action, actionID, actionSequence, "namespace", false, err); recordErr != nil {
+					return ValidationResult{}, fmt.Errorf("record policy decision: %w", recordErr)
+				}
 				debugLogger.Log("guardrail_namespace_denied", map[string]any{
 					"error":     err.Error(),
 					"iteration": state.Iteration + 1,
@@ -349,8 +379,14 @@ func runValidationLoopWithEvaluator(
 				})
 				return ValidationResult{}, err
 			}
+			if err := recordPolicyDecision(collector, action, actionID, actionSequence, "namespace", true, nil); err != nil {
+				return ValidationResult{}, fmt.Errorf("record policy decision: %w", err)
+			}
 		}
 		if err := enforcer.Acquire(ctx); err != nil {
+			if recordErr := recordPolicyDecision(collector, action, actionID, actionSequence, "rate_limit", false, err); recordErr != nil {
+				return ValidationResult{}, fmt.Errorf("record policy decision: %w", recordErr)
+			}
 			debugLogger.Log("guardrail_rate_limit_error", map[string]any{
 				"error":     err.Error(),
 				"iteration": state.Iteration + 1,
@@ -358,14 +394,21 @@ func runValidationLoopWithEvaluator(
 			})
 			return ValidationResult{}, fmt.Errorf("guardrail rate-limit wait failed: %w", err)
 		}
+		if err := recordPolicyDecision(collector, action, actionID, actionSequence, "rate_limit", true, nil); err != nil {
+			return ValidationResult{}, fmt.Errorf("record policy decision: %w", err)
+		}
 
 		tool, ok := registry.Get(action.ToolName)
 		if !ok {
+			lookupErr := fmt.Errorf("unknown tool %q", action.ToolName)
+			if recordErr := recordPolicyDecision(collector, action, actionID, actionSequence, "tool_lookup", false, lookupErr); recordErr != nil {
+				return ValidationResult{}, fmt.Errorf("record policy decision: %w", recordErr)
+			}
 			debugLogger.Log("tool_lookup_error", map[string]any{
 				"iteration": state.Iteration + 1,
 				"tool_name": action.ToolName,
 			})
-			return ValidationResult{}, fmt.Errorf("unknown tool %q", action.ToolName)
+			return ValidationResult{}, lookupErr
 		}
 
 		// Schema-level parameter validation: catch malformed LLM parameters before tool.Run().
@@ -374,6 +417,9 @@ func runValidationLoopWithEvaluator(
 			// Only validate if the schema has declared properties; empty schemas accept any input.
 			if schema.Type != "" || len(schema.Properties) > 0 {
 				if err := tools.ValidateParameters(action.Parameters, schema); err != nil {
+					if recordErr := recordPolicyDecision(collector, action, actionID, actionSequence, "schema", false, err); recordErr != nil {
+						return ValidationResult{}, fmt.Errorf("record policy decision: %w", recordErr)
+					}
 					debugLogger.Log("tool_parameter_validation_error", map[string]any{
 						"error":      err.Error(),
 						"iteration":  state.Iteration + 1,
@@ -382,7 +428,13 @@ func runValidationLoopWithEvaluator(
 					})
 					return ValidationResult{}, fmt.Errorf("invalid parameters for %s: %w", action.ToolName, err)
 				}
+				if err := recordPolicyDecision(collector, action, actionID, actionSequence, "schema", true, nil); err != nil {
+					return ValidationResult{}, fmt.Errorf("record policy decision: %w", err)
+				}
 			}
+		}
+		if err := recordPolicyDecision(collector, action, actionID, actionSequence, "dispatch", true, nil); err != nil {
+			return ValidationResult{}, fmt.Errorf("record policy decision: %w", err)
 		}
 
 		state.Context["active_phase"] = "tool"

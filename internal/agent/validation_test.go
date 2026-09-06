@@ -1098,13 +1098,8 @@ func TestValidationReactLoopLifecycleIntegration(t *testing.T) {
 	}
 
 	records := readEvidenceRecords(t, result.EvidencePath)
-	if len(records) != 1 {
-		t.Fatalf("expected one evidence record, got %d", len(records))
-	}
-	if records[0].Step != "validation_tool_execution" {
-		t.Fatalf("expected tool execution record first, got %q", records[0].Step)
-	}
-	usageRecord, ok := records[0].Data["planner_usage"].(map[string]any)
+	toolRecord := findEvidenceRecord(t, records, "validation_tool_execution")
+	usageRecord, ok := toolRecord.Data["planner_usage"].(map[string]any)
 	if !ok {
 		t.Fatalf("expected planner_usage object on tool execution record, got %#v", records[0].Data["planner_usage"])
 	}
@@ -1456,6 +1451,17 @@ func readEvidenceRecords(t *testing.T, evidenceDir string) []evidence.Record {
 		t.Fatalf("scan evidence jsonl: %v", err)
 	}
 	return records
+}
+
+func findEvidenceRecord(t *testing.T, records []evidence.Record, step string) evidence.Record {
+	t.Helper()
+	for _, record := range records {
+		if record.Step == step {
+			return record
+		}
+	}
+	t.Fatalf("evidence record %q not found in %#v", step, records)
+	return evidence.Record{}
 }
 
 func readSnapshotIndex(t *testing.T, evidenceDir string) evidence.SnapshotIndex {
@@ -2442,6 +2448,19 @@ func TestValidationTraceOutcomeFields(t *testing.T) {
 		if entry.ActionID != wantID {
 			t.Fatalf("trace %d action ID = %q, want %q", i, entry.ActionID, wantID)
 		}
+	}
+	policyRecords := 0
+	for _, record := range readEvidenceRecords(t, res.EvidencePath) {
+		if record.Step != "policy_decision" {
+			continue
+		}
+		policyRecords++
+		if record.Data["action_id"] == "" || record.Data["action_sequence"] == nil {
+			t.Fatalf("policy decision is missing action attribution: %#v", record.Data)
+		}
+	}
+	if policyRecords < len(res.Trace) {
+		t.Fatalf("expected at least one policy decision per dispatched action, got %d for %d actions", policyRecords, len(res.Trace))
 	}
 
 	// Trace index 0: discovery.list_namespaces — no taxonomy.
