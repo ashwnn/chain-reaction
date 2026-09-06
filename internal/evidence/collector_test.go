@@ -1,6 +1,7 @@
 package evidence
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -60,6 +61,60 @@ func TestCollector_Record(t *testing.T) {
 	}
 	if rec.Data["key"] != "value" {
 		t.Errorf("expected data key value 'value', got %v", rec.Data["key"])
+	}
+	if rec.Sequence != 1 || rec.Hash == "" || rec.PrevHash != "" {
+		t.Fatalf("first record does not carry a valid chain header: %+v", rec)
+	}
+	if _, err := VerifyEvidenceLog(path); err != nil {
+		t.Fatalf("verify intact evidence log: %v", err)
+	}
+}
+
+func TestVerifyEvidenceLogRejectsTamperingTruncationAndReordering(t *testing.T) {
+	dir := t.TempDir()
+	collector, err := NewCollector(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := collector.Record("first", map[string]any{"value": "one"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := collector.Record("second", map[string]any{"value": "two"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := collector.Close(); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "evidence.jsonl")
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := VerifyEvidenceLog(path); err != nil {
+		t.Fatalf("verify intact chain: %v", err)
+	}
+
+	tampered := bytes.Replace(body, []byte(`"one"`), []byte(`"uno"`), 1)
+	if err := os.WriteFile(path, tampered, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := VerifyEvidenceLog(path); err == nil {
+		t.Fatal("tampered evidence accepted")
+	}
+
+	if err := os.WriteFile(path, body[:len(body)-2], 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := VerifyEvidenceLog(path); err == nil {
+		t.Fatal("truncated evidence accepted")
+	}
+
+	lines := bytes.Split(bytes.TrimSpace(body), []byte("\n"))
+	if err := os.WriteFile(path, append(append(lines[1], '\n'), lines[0]...), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := VerifyEvidenceLog(path); err == nil {
+		t.Fatal("reordered evidence accepted")
 	}
 }
 
