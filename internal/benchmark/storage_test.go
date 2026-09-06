@@ -46,3 +46,33 @@ func TestPrivateSeedAndPublicCommitmentsRemainSeparate(t *testing.T) {
 		}
 	}
 }
+
+func TestAttemptLedgerIsImmutableAndStrictlyDecoded(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "attempt-ledger.json")
+	ledger := validAttemptLedger()
+	if err := WriteAttemptLedger(path, ledger); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteAttemptLedger(path, ledger); err == nil {
+		t.Fatal("attempt ledger overwrite accepted")
+	}
+	loaded, err := ReadAttemptLedger(path)
+	if err != nil || len(loaded.Cells) != 1 {
+		t.Fatalf("read persisted ledger: %+v %v", loaded, err)
+	}
+	if err := os.WriteFile(path, append(mustReadFile(t, path), []byte(" {}")...), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReadAttemptLedger(path); err == nil {
+		t.Fatal("trailing attempt-ledger JSON accepted")
+	}
+}
+
+func mustReadFile(t *testing.T, path string) []byte {
+	t.Helper()
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return body
+}

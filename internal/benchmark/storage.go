@@ -1,7 +1,10 @@
 package benchmark
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -74,6 +77,52 @@ func WritePublicCommitmentManifest(path string, manifest CommitmentManifest) err
 		return fmt.Errorf("write public commitment manifest: %w", err)
 	}
 	return file.Close()
+}
+
+// WriteAttemptLedger persists a validated controller-side ledger exactly once.
+// Replacing an existing ledger would erase attempted-run denominator evidence.
+func WriteAttemptLedger(path string, ledger AttemptLedger) error {
+	if err := ledger.Validate(); err != nil {
+		return err
+	}
+	body, err := CanonicalJSON(ledger)
+	if err != nil {
+		return err
+	}
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return fmt.Errorf("create attempt ledger: %w", err)
+	}
+	if _, err := file.Write(body); err != nil {
+		_ = file.Close()
+		return fmt.Errorf("write attempt ledger: %w", err)
+	}
+	return file.Close()
+}
+
+// ReadAttemptLedger rejects trailing values and validates all retained attempts.
+func ReadAttemptLedger(path string) (AttemptLedger, error) {
+	body, err := os.ReadFile(path)
+	if err != nil {
+		return AttemptLedger{}, fmt.Errorf("read attempt ledger: %w", err)
+	}
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.DisallowUnknownFields()
+	var ledger AttemptLedger
+	if err := decoder.Decode(&ledger); err != nil {
+		return AttemptLedger{}, fmt.Errorf("decode attempt ledger: %w", err)
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		if err == nil {
+			return AttemptLedger{}, fmt.Errorf("decode attempt ledger: trailing JSON value")
+		}
+		return AttemptLedger{}, fmt.Errorf("decode attempt ledger: %w", err)
+	}
+	if err := ledger.Validate(); err != nil {
+		return AttemptLedger{}, err
+	}
+	return ledger, nil
 }
 
 func ensurePrivateDirectory(path string) error {
