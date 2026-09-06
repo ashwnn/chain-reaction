@@ -1099,6 +1099,15 @@ func TestValidationReactLoopLifecycleIntegration(t *testing.T) {
 
 	records := readEvidenceRecords(t, result.EvidencePath)
 	toolRecord := findEvidenceRecord(t, records, "validation_tool_execution")
+	finalAnswerRejected := false
+	for _, record := range records {
+		if record.Step == "policy_decision" && record.Data["policy_stage"] == "final_answer_gate" && record.Data["allowed"] == false {
+			finalAnswerRejected = true
+		}
+	}
+	if !finalAnswerRejected {
+		t.Fatalf("expected rejected final answer to produce a denied policy decision")
+	}
 	usageRecord, ok := toolRecord.Data["planner_usage"].(map[string]any)
 	if !ok {
 		t.Fatalf("expected planner_usage object on tool execution record, got %#v", records[0].Data["planner_usage"])

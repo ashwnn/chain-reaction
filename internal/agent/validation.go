@@ -312,6 +312,10 @@ func runValidationLoopWithEvaluator(
 				agentNS := resolveAgentNamespace(cfg.Namespace, trace)
 				decision := evaluateFinalAnswerReadiness(trace, agentNS, start)
 				if !decision.Ready {
+					gateErr := fmt.Errorf("final answer rejected: required catalog steps are unmet")
+					if recordErr := recordPolicyDecision(collector, action, actionID, actionSequence, "final_answer_gate", false, gateErr); recordErr != nil {
+						return ValidationResult{}, fmt.Errorf("record policy decision: %w", recordErr)
+					}
 					debugLogger.Log("final_answer_rejected_unmet_catalog_steps", map[string]any{
 						"blocked_unmet_steps": decision.BlockedUnmetSteps,
 						"iteration":           state.Iteration,
@@ -326,6 +330,9 @@ func runValidationLoopWithEvaluator(
 					"iteration":           state.Iteration,
 					"remaining":           remainingBudget(state, checker.Timeout),
 				})
+			}
+			if err := recordPolicyDecision(collector, action, actionID, actionSequence, "final_answer_gate", true, nil); err != nil {
+				return ValidationResult{}, fmt.Errorf("record policy decision: %w", err)
 			}
 			finalAnswer = action.FinalAnswer
 			finalAnswerUsage = action.Usage
