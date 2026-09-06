@@ -48,6 +48,7 @@ func NewRootCmd(version, commit, date string) *cobra.Command {
 	cmd.AddCommand(newAnalyzeCmd(state))
 	cmd.AddCommand(newCompareCmd(state))
 	cmd.AddCommand(newBenchmarkCmd())
+	cmd.AddCommand(newVerifyCmd())
 	cmd.AddCommand(newVersionCmd(state))
 
 	return cmd

@@ -31,4 +31,12 @@ func TestRootCommandIncludesValidateAndTheory(t *testing.T) {
 		t.Fatalf("expected theory command, got %#v", theoryCmd)
 	}
 
+	verifyCmd, _, err := cmd.Find([]string{"verify", "evidence"})
+	if err != nil {
+		t.Fatalf("expected verify evidence command: %v", err)
+	}
+	if verifyCmd == nil || verifyCmd.Name() != "evidence" {
+		t.Fatalf("expected evidence verifier, got %#v", verifyCmd)
+	}
+
 }
