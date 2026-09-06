@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -34,19 +35,21 @@ type ProbeNetworkTool struct {
 }
 
 func NewProbeNetworkTool(enforcer *guardrails.Enforcer, collector *evidence.Collector) *ProbeNetworkTool {
-	return &ProbeNetworkTool{
+	tool := &ProbeNetworkTool{
 		resolver:  net.DefaultResolver,
 		dialer:    &net.Dialer{},
 		enforcer:  enforcer,
 		collector: collector,
-		httpClient: &http.Client{
-			Timeout: defaultProbeTimeoutSeconds * time.Second,
-			// Do not follow redirects — capture the raw response status.
-			CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
-				return http.ErrUseLastResponse
-			},
+	}
+	tool.httpClient = &http.Client{
+		Timeout:   defaultProbeTimeoutSeconds * time.Second,
+		Transport: &http.Transport{DialContext: tool.dialCheckedContext},
+		// Do not follow redirects - capture the raw response status.
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse
 		},
 	}
+	return tool
 }
 
 func (t *ProbeNetworkTool) Name() string {
@@ -178,6 +181,9 @@ func (t *ProbeNetworkTool) runTCPProbe(ctx context.Context, target string, port,
 	if port < 1 || port > 65535 {
 		return nil, errors.New("port must be between 1 and 65535")
 	}
+	if err := validateDestinationHost(target); err != nil {
+		return blockedTCPResult(target, port, err), nil
+	}
 
 	if t.enforcer != nil {
 		if ns := extractNamespaceFromTarget(target); ns != "" {
@@ -255,6 +261,10 @@ func (t *ProbeNetworkTool) runTCPProbe(ctx context.Context, target string, port,
 // runHTTPProbe performs a single HTTP GET to url. It does not follow redirects.
 // The timeout is applied at the request level via the context.
 func (t *ProbeNetworkTool) runHTTPProbe(ctx context.Context, url string, timeoutSeconds int) (map[string]any, error) {
+	if err := validateHTTPDestination(url); err != nil {
+		return blockedHTTPResult(url, err), nil
+	}
+
 	if t.enforcer != nil {
 		if ns := extractNamespaceFromURL(url); ns != "" {
 			if err := t.enforcer.CheckNamespace(ns); err != nil {
@@ -349,6 +359,10 @@ func (t *ProbeNetworkTool) probeAttempt(ctx context.Context, target string, port
 		attemptResult["error"] = err.Error()
 		return attemptResult, err
 	}
+	if err := validateResolvedIPs(ipAddrs); err != nil {
+		attemptResult["error"] = err.Error()
+		return attemptResult, err
+	}
 
 	resolvedIPs := make([]string, 0, len(ipAddrs))
 	for _, ipAddr := range ipAddrs {
@@ -403,9 +417,116 @@ func (t *ProbeNetworkTool) probeAttempt(ctx context.Context, target string, port
 	return attemptResult, dialErr
 }
 
+// dialCheckedContext resolves the requested HTTP host immediately before each
+// connection, rejects unsafe or mixed DNS answers, then dials the checked IP.
+// It prevents an HTTP transport from bypassing the probe's TCP target policy.
+func (t *ProbeNetworkTool) dialCheckedContext(ctx context.Context, network, address string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, fmt.Errorf("parse HTTP destination %q: %w", address, err)
+	}
+	if err := validateDestinationHost(host); err != nil {
+		return nil, err
+	}
+
+	ipAddrs, err := t.resolver.LookupIPAddr(ctx, host)
+	if err != nil {
+		return nil, fmt.Errorf("resolve HTTP destination %q: %w", host, err)
+	}
+	if err := validateResolvedIPs(ipAddrs); err != nil {
+		return nil, err
+	}
+
+	var dialErr error
+	for _, ipAddr := range ipAddrs {
+		conn, err := t.dialer.DialContext(ctx, network, net.JoinHostPort(ipAddr.IP.String(), port))
+		if err == nil {
+			return conn, nil
+		}
+		dialErr = err
+	}
+	if dialErr == nil {
+		dialErr = errors.New("DNS resolution returned no IPs")
+	}
+	return nil, dialErr
+}
+
+func blockedHTTPResult(rawURL string, err error) map[string]any {
+	return map[string]any{
+		"probe":          probeTypeHTTP,
+		"url":            rawURL,
+		"status":         string(StepFailed),
+		"failure_reason": string(FailureGuardrailBlocked),
+		"error":          err.Error(),
+	}
+}
+
+func blockedTCPResult(target string, port int, err error) map[string]any {
+	return map[string]any{
+		"probe":          probeTypeTCP,
+		"target":         target,
+		"port":           port,
+		"status":         string(StepFailed),
+		"failure_reason": string(FailureGuardrailBlocked),
+		"error":          err.Error(),
+	}
+}
+
+func blockedDNSResult(target string, err error) map[string]any {
+	return map[string]any{
+		"probe":          probeTypeDNS,
+		"target":         target,
+		"status":         string(StepFailed),
+		"failure_reason": string(FailureGuardrailBlocked),
+		"error":          err.Error(),
+	}
+}
+
+func validateHTTPDestination(rawURL string) error {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("parse HTTP destination: %w", err)
+	}
+	return validateDestinationHost(parsed.Hostname())
+}
+
+func validateDestinationHost(host string) error {
+	host = strings.TrimSpace(strings.TrimSuffix(strings.ToLower(host), "."))
+	if host == "" {
+		return errors.New("HTTP destination host is required")
+	}
+	if host == "localhost" || host == "kubernetes.default" || host == "kubernetes.default.svc" || host == "kubernetes.default.svc.cluster.local" {
+		return fmt.Errorf("destination %q is blocked by the default network policy", host)
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		return validateResolvedIPs([]net.IPAddr{{IP: ip}})
+	}
+	return nil
+}
+
+func validateResolvedIPs(ipAddrs []net.IPAddr) error {
+	if len(ipAddrs) == 0 {
+		return errors.New("DNS resolution returned no IPs")
+	}
+	for _, ipAddr := range ipAddrs {
+		if isUnsafeDestinationIP(ipAddr.IP) {
+			return fmt.Errorf("resolved destination %q is blocked by the default network policy", ipAddr.IP)
+		}
+	}
+	return nil
+}
+
+func isUnsafeDestinationIP(ip net.IP) bool {
+	return ip == nil || ip.IsUnspecified() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsMulticast()
+}
+
 // runDNSProbe resolves target using net.DefaultResolver.LookupHost and returns
 // the resolved addresses. Returns an error if resolution fails (e.g. NXDOMAIN).
 func (t *ProbeNetworkTool) runDNSProbe(ctx context.Context, target string, timeoutSeconds int) (map[string]any, error) {
+	if err := validateDestinationHost(target); err != nil {
+		return blockedDNSResult(target, err), nil
+	}
+
 	if t.enforcer != nil {
 		if ns := extractNamespaceFromTarget(target); ns != "" {
 			if err := t.enforcer.CheckNamespace(ns); err != nil {
@@ -460,6 +581,16 @@ func (t *ProbeNetworkTool) runDNSProbe(ctx context.Context, target string, timeo
 			}
 		}
 		result["error"] = err.Error()
+		t.recordEvidence(result)
+		return result, nil
+	}
+	ipAddrs := make([]net.IPAddr, 0, len(addrs))
+	for _, addr := range addrs {
+		ipAddrs = append(ipAddrs, net.IPAddr{IP: net.ParseIP(addr)})
+	}
+	if err := validateResolvedIPs(ipAddrs); err != nil {
+		result["error"] = err.Error()
+		result["failure_reason"] = string(FailureGuardrailBlocked)
 		t.recordEvidence(result)
 		return result, nil
 	}
