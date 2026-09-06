@@ -36,7 +36,6 @@ func NewRootCmd(version, commit, date string) *cobra.Command {
 	cmd.PersistentFlags().IntVar(&state.opts.Burst, "k8s-burst", 20, "Kubernetes API burst")
 	cmd.PersistentFlags().StringVar(&state.opts.LLMProvider, "llm-provider", "", "LLM provider for validation planning (scan remains deterministic)")
 	cmd.PersistentFlags().StringVar((*string)(&state.opts.PlannerMode), "planner-mode", string(config.PlannerModeBlind), "Planner mode: blind, goat_hinted, or scripted_oracle")
-	cmd.PersistentFlags().StringVar(&state.opts.LLMAPIKey, "llm-api-key", "", "LLM API key for validation planning (not used by scan)")
 	cmd.PersistentFlags().StringVar(&state.opts.LLMBaseURL, "llm-base-url", "", "LLM base URL for validation planning (not used by scan)")
 	cmd.PersistentFlags().StringVar(&state.opts.LLMModel, "llm-model", "", "LLM model for validation planning (not used by scan)")
 	cmd.PersistentFlags().Float64Var(&state.opts.LLMTemperature, "llm-temperature", -1.0, "LLM temperature (0.0 to 1.0) (-1.0 to leave unset/provider default)")

@@ -412,8 +412,8 @@ func TestValidateForMode_ValidateRequiresAPIKey(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for missing API key in validate mode")
 	}
-	if !strings.Contains(err.Error(), "llm_api_key") {
-		t.Fatalf("error should mention llm_api_key: %v", err)
+	if !strings.Contains(err.Error(), "environment variable") {
+		t.Fatalf("error should require environment injection: %v", err)
 	}
 }
 

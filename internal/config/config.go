@@ -54,7 +54,6 @@ type CLIOptions struct {
 	Burst                int
 	LLMProvider          string
 	PlannerMode          PlannerMode
-	LLMAPIKey            string
 	LLMBaseURL           string
 	LLMModel             string
 	LLMTemperature       float64 // Use -1 to indicate unset
@@ -75,7 +74,6 @@ type fileOptions struct {
 	Burst                *int        `yaml:"k8s_burst"`
 	LLMProvider          string      `yaml:"llm_provider"`
 	PlannerMode          PlannerMode `yaml:"planner_mode"`
-	LLMAPIKey            string      `yaml:"llm_api_key"`
 	LLMBaseURL           string      `yaml:"llm_base_url"`
 	LLMModel             string      `yaml:"llm_model"`
 	LLMTemperature       *float64    `yaml:"llm_temperature"`
@@ -180,11 +178,7 @@ func FromCLI(opts CLIOptions) (Config, error) {
 		cfg.LLMMaxTokens = &tokens
 	}
 
-	if opts.LLMAPIKey != "" {
-		cfg.LLMAPIKey = opts.LLMAPIKey
-	} else if cfg.LLMAPIKey == "" {
-		cfg.LLMAPIKey = resolveLLMAPIKeyFromEnv(cfg.LLMProvider)
-	}
+	cfg.LLMAPIKey = resolveLLMAPIKeyFromEnv(cfg.LLMProvider)
 
 	// CLI flag takes explicit precedence; file-config opt-in is preserved when CLI flag is absent.
 	cfg.StepOutcomeEvaluator = opts.StepOutcomeEvaluator || cfg.StepOutcomeEvaluator
@@ -241,9 +235,6 @@ func applyFileOptions(cfg *Config, options fileOptions) error {
 	}
 	if options.PlannerMode != "" {
 		cfg.PlannerMode = options.PlannerMode
-	}
-	if options.LLMAPIKey != "" {
-		cfg.LLMAPIKey = options.LLMAPIKey
 	}
 	if options.LLMBaseURL != "" {
 		cfg.LLMBaseURL = options.LLMBaseURL

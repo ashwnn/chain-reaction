@@ -24,7 +24,7 @@
 # Prerequisites:
 #   - Evaluation environment running (run make env-setup && make env-healthcheck)
 #   - chain-reaction binary built with LLM support
-#   - LLM_API_KEY environment variable set (or pass via --llm-api-key)
+#   - provider API-key environment variable set
 #
 # This script FAILS LOUDLY on any error (set -euo pipefail).
 
@@ -107,8 +107,8 @@ if [[ "${ORGANIZE_ONLY}" == "false" ]]; then
         exit 1
     fi
 
-    if [[ -z "${LLM_API_KEY}" ]]; then
-        echo "ERROR: LLM_API_KEY is not set. Set it via environment or --llm-api-key." >&2
+    if [[ -z "${LLM_API_KEY:-}" && -z "${OPENAI_API_KEY:-}" && -z "${ANTHROPIC_API_KEY:-}" && -z "${GROQ_API_KEY:-}" ]]; then
+        echo "ERROR: no supported provider API key is set in the environment." >&2
         exit 1
     fi
 
@@ -170,7 +170,6 @@ if [[ "${ORGANIZE_ONLY}" == "false" ]]; then
             --max-steps "${MAX_STEPS}"
             --time-budget "${TIME_BUDGET}"
             --llm-provider "${LLM_PROVIDER}"
-            --llm-api-key "${LLM_API_KEY}"
             --llm-model "${LLM_MODEL}"
         )
 

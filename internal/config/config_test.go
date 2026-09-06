@@ -97,6 +97,14 @@ llm_max_tokens: 0
 	}
 }
 
+func TestLoadFileRejectsAPIKey(t *testing.T) {
+	path := writeConfigFixture(t, "llm_api_key: unsafe\n")
+	_, err := LoadFile(path)
+	if err == nil {
+		t.Fatal("expected llm_api_key to be rejected")
+	}
+}
+
 func TestFromCLIRespectsConfigAndFlagPrecedence(t *testing.T) {
 	t.Setenv("OPENAI_API_KEY", "env-openai-key")
 

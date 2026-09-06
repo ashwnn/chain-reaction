@@ -13,7 +13,7 @@ k8s_burst: 20
 # Example only. The pinned evaluation settings live in `configs/evaluation.yaml`.
 llm_provider: openai
 planner_mode: blind
-llm_api_key: ""
+# Set OPENAI_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY, or LLM_API_KEY in the environment.
 llm_base_url: ""
 llm_model: gpt-4o-mini
 llm_temperature: 0

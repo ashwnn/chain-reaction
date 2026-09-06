@@ -128,7 +128,7 @@ func ValidateForMode(cfg Config, mode string) error {
 	switch strings.ToLower(mode) {
 	case "validate":
 		if cfg.LLMAPIKey == "" {
-			errs = append(errs, errors.New("llm_api_key: is required for validate mode (set via --llm-api-key flag, config file, provider-specific environment variable, or LLM_API_KEY)"))
+			errs = append(errs, errors.New("LLM API key is required for validate mode (set a provider-specific environment variable or LLM_API_KEY)"))
 		}
 		if cfg.LLMModel == "" {
 			errs = append(errs, errors.New("llm_model: is required for validate mode (set via --llm-model flag or config file)"))

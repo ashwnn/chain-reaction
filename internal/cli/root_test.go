@@ -7,6 +7,9 @@ func TestRootCommandIncludesValidateAndTheory(t *testing.T) {
 	if cmd.PersistentFlags().Lookup("config") == nil {
 		t.Fatal("expected root command to expose --config")
 	}
+	if cmd.PersistentFlags().Lookup("llm-api-key") != nil {
+		t.Fatal("API keys must not be accepted through process arguments")
+	}
 	validateCmd, _, err := cmd.Find([]string{"validate"})
 	if err != nil {
 		t.Fatalf("expected validate command to be registered: %v", err)

@@ -1,7 +1,6 @@
 # Version-controlled evaluation settings for reproducible validate runs.
 # Secrets stay out of the repository: provide OPENAI_API_KEY / ANTHROPIC_API_KEY /
-# GROQ_API_KEY in the environment, or override llm_api_key with a flag when
-# running in a controlled lab.
+# GROQ_API_KEY in the environment when running in a controlled lab.
 
 namespace: ""
 kubeconfig: ""
@@ -17,7 +16,6 @@ k8s_burst: 20
 
 llm_provider: openai
 planner_mode: blind
-llm_api_key: ""
 llm_base_url: ""
 llm_model: gpt-4o-mini
 llm_temperature: 0
