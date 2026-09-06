@@ -13,15 +13,18 @@ import (
 // Observation is normalized controller-side machine evidence. Model text is
 // intentionally not part of this contract.
 type Observation struct {
-	RunID          string    `json:"run_id"`
-	ScenarioDigest string    `json:"scenario_digest"`
-	Sequence       int       `json:"sequence"`
-	Actor          Actor     `json:"actor"`
-	ActionID       string    `json:"action_id"`
-	Target         ObjectRef `json:"target"`
-	Effect         string    `json:"effect"`
-	EvidenceID     string    `json:"evidence_id"`
-	EvidenceDigest string    `json:"evidence_digest"`
+	RunID                string    `json:"run_id"`
+	ScenarioDigest       string    `json:"scenario_digest"`
+	Sequence             int       `json:"sequence"`
+	Actor                Actor     `json:"actor"`
+	ActionID             string    `json:"action_id"`
+	Target               ObjectRef `json:"target"`
+	Effect               string    `json:"effect"`
+	EvidenceID           string    `json:"evidence_id"`
+	EvidenceDigest       string    `json:"evidence_digest"`
+	ExecutionContextID   string    `json:"execution_context_id,omitempty"`
+	ConsumedCapabilities []string  `json:"consumed_capabilities,omitempty"`
+	ProducedCapabilities []string  `json:"produced_capabilities,omitempty"`
 }
 
 type PredicateResult struct {
@@ -52,36 +55,40 @@ func Score(oracle OracleContract, oracleDigest, scenarioDigest string, observati
 	}
 	result := OracleResult{Version: ResultVersion, ScenarioDigest: scenarioDigest, OracleDigest: oracleDigest, Passed: true, PredicateResults: make([]PredicateResult, 0, len(oracle.Predicates))}
 	used := make(map[string]bool)
-	lastSequence := 0
-	passed := make(map[string]bool)
-	for _, predicate := range oracle.Predicates {
-		pr := PredicateResult{PredicateID: predicate.ID}
-		for _, predecessor := range predicate.Predecessors {
-			if !passed[predecessor] {
-				pr.Reason = "predecessor_not_satisfied"
-				break
+	passed := make(map[string]bool, len(oracle.Predicates))
+	sequences := make(map[string]int, len(oracle.Predicates))
+	results := make(map[string]PredicateResult, len(oracle.Predicates))
+	producers := capabilityProducers(oracle)
+	for progress := true; progress; {
+		progress = false
+		for _, predicate := range oracle.Predicates {
+			if passed[predicate.ID] || !dependenciesSatisfied(predicate, passed, sequences, producers, 0) {
+				continue
 			}
-		}
-		if pr.Reason == "" {
 			for _, observation := range observations {
-				if used[observation.EvidenceID] || observation.Sequence <= lastSequence || observation.RunID == "" || observation.ScenarioDigest != scenarioDigest {
+				if used[observation.EvidenceID] || observation.RunID == "" || observation.ScenarioDigest != scenarioDigest {
 					continue
 				}
 				if err := validateDigest("evidence_digest", observation.EvidenceDigest); err != nil {
 					continue
 				}
-				if matches(predicate, observation) {
-					used[observation.EvidenceID] = true
-					lastSequence = observation.Sequence
-					pr.Passed = true
-					break
+				if !dependenciesSatisfied(predicate, passed, sequences, producers, observation.Sequence) || !matches(predicate, observation) {
+					continue
 				}
-			}
-			if !pr.Passed {
-				pr.Reason = "no_exact_machine_evidence"
+				used[observation.EvidenceID] = true
+				passed[predicate.ID] = true
+				sequences[predicate.ID] = observation.Sequence
+				results[predicate.ID] = PredicateResult{PredicateID: predicate.ID, Passed: true}
+				progress = true
+				break
 			}
 		}
-		passed[predicate.ID] = pr.Passed
+	}
+	for _, predicate := range oracle.Predicates {
+		pr, ok := results[predicate.ID]
+		if !ok {
+			pr = PredicateResult{PredicateID: predicate.ID, Reason: unsatisfiedReason(predicate, passed, producers)}
+		}
 		result.PredicateResults = append(result.PredicateResults, pr)
 		if !pr.Passed {
 			result.Passed = false
@@ -91,7 +98,145 @@ func Score(oracle OracleContract, oracleDigest, scenarioDigest string, observati
 }
 
 func matches(predicate Predicate, observation Observation) bool {
-	return predicate.ActionID == observation.ActionID && predicate.ExpectedEffect == observation.Effect && predicate.Actor == observation.Actor && predicate.Target == observation.Target
+	if predicate.ActionID != observation.ActionID || predicate.ExpectedEffect != observation.Effect || predicate.Actor != observation.Actor || predicate.Target != observation.Target {
+		return false
+	}
+	if predicate.ExecutionContextID != "" && predicate.ExecutionContextID != observation.ExecutionContextID {
+		return false
+	}
+	if !sameCapabilityIDs(predicate.Produces, observation.ProducedCapabilities) {
+		return false
+	}
+	return containsAll(observation.ConsumedCapabilities, predicate.RequiresAll) && containsAlternative(observation.ConsumedCapabilities, predicate.RequiresAny)
+}
+
+func capabilityProducers(oracle OracleContract) map[string]string {
+	producers := make(map[string]string, len(oracle.InitialCapabilities))
+	for _, capability := range oracle.InitialCapabilities {
+		producers[capability.ID] = ""
+	}
+	for _, predicate := range oracle.Predicates {
+		for _, capability := range predicate.Produces {
+			producers[capability.ID] = predicate.ID
+		}
+	}
+	return producers
+}
+
+func dependenciesSatisfied(predicate Predicate, passed map[string]bool, sequences map[string]int, producers map[string]string, sequence int) bool {
+	for _, predecessor := range predicate.Predecessors {
+		if !passed[predecessor] || sequence > 0 && sequences[predecessor] >= sequence {
+			return false
+		}
+	}
+	for _, capabilityID := range predicate.RequiresAll {
+		if !capabilityAvailable(capabilityID, passed, sequences, producers, sequence) {
+			return false
+		}
+	}
+	for _, alternatives := range predicate.RequiresAny {
+		available := false
+		for _, capabilityID := range alternatives {
+			if capabilityAvailable(capabilityID, passed, sequences, producers, sequence) {
+				available = true
+				break
+			}
+		}
+		if !available {
+			return false
+		}
+	}
+	return true
+}
+
+func capabilityAvailable(id string, passed map[string]bool, sequences map[string]int, producers map[string]string, sequence int) bool {
+	producer := producers[id]
+	if producer == "" {
+		return true
+	}
+	return passed[producer] && (sequence == 0 || sequences[producer] < sequence)
+}
+
+func unsatisfiedReason(predicate Predicate, passed map[string]bool, producers map[string]string) string {
+	for _, predecessor := range predicate.Predecessors {
+		if !passed[predecessor] {
+			return "predecessor_not_satisfied"
+		}
+	}
+	for _, capabilityID := range predicate.RequiresAll {
+		if producer := producers[capabilityID]; producer != "" && !passed[producer] {
+			return "capability_not_available"
+		}
+	}
+	for _, alternatives := range predicate.RequiresAny {
+		available := false
+		for _, capabilityID := range alternatives {
+			if producer := producers[capabilityID]; producer == "" || passed[producer] {
+				available = true
+				break
+			}
+		}
+		if !available {
+			return "capability_not_available"
+		}
+	}
+	return "no_exact_machine_evidence"
+}
+
+func sameCapabilityIDs(expected []Capability, actual []string) bool {
+	if len(expected) != len(actual) {
+		return false
+	}
+	expectedIDs := make(map[string]struct{}, len(expected))
+	for _, capability := range expected {
+		expectedIDs[capability.ID] = struct{}{}
+	}
+	return containsAll(actual, mapKeys(expectedIDs)) && len(uniqueStrings(actual)) == len(actual)
+}
+
+func containsAll(actual, required []string) bool {
+	actualSet := make(map[string]struct{}, len(actual))
+	for _, value := range actual {
+		actualSet[value] = struct{}{}
+	}
+	for _, value := range required {
+		if _, ok := actualSet[value]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func containsAlternative(actual []string, groups [][]string) bool {
+	for _, alternatives := range groups {
+		matched := false
+		for _, alternative := range alternatives {
+			if containsAll(actual, []string{alternative}) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return false
+		}
+	}
+	return true
+}
+
+func mapKeys(values map[string]struct{}) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+func uniqueStrings(values []string) map[string]struct{} {
+	unique := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		unique[value] = struct{}{}
+	}
+	return unique
 }
 
 // ScoreWithCluster adds controller-side live-state checks to exact normalized
