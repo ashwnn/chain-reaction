@@ -50,6 +50,32 @@ type validationPlanner interface {
 	NextAction(context.Context, *state, []string) (plannerAction, error)
 }
 
+// canonicalizePolicyAction resolves tool defaults before the central policy
+// check. Policy-relevant defaults must not be applied later inside a tool,
+// where an omitted planner parameter could bypass an allow-list.
+func canonicalizePolicyAction(action plannerAction) (plannerAction, error) {
+	parameters := make(map[string]any, len(action.Parameters)+1)
+	for key, value := range action.Parameters {
+		parameters[key] = value
+	}
+	if value, supplied := parameters["allow_namespaces"]; supplied {
+		switch value.(type) {
+		case []string, []any:
+			return plannerAction{}, fmt.Errorf("%s cannot set allow_namespaces; namespace policy is operator-controlled", action.ToolName)
+		}
+	}
+	switch action.ToolName {
+	case "validation.read_secret", "validation.check_permissions":
+		if namespace, supplied := parameters["namespace"]; !supplied || namespace == "" {
+			parameters["namespace"] = "default"
+		} else if value, ok := namespace.(string); ok && value == "" {
+			parameters["namespace"] = "default"
+		}
+	}
+	action.Parameters = parameters
+	return action, nil
+}
+
 type deterministicValidationPlanner struct{}
 
 func (p *deterministicValidationPlanner) NextAction(_ context.Context, state *state, availableTools []string) (plannerAction, error) {
@@ -296,6 +322,16 @@ func runValidationLoopWithEvaluator(
 			continue
 		}
 
+		canonicalAction, err := canonicalizePolicyAction(action)
+		if err != nil {
+			debugLogger.Log("guardrail_canonicalization_denied", map[string]any{
+				"error":     err.Error(),
+				"iteration": state.Iteration + 1,
+				"tool_name": action.ToolName,
+			})
+			return ValidationResult{}, err
+		}
+		action = canonicalAction
 		if namespace, ok := action.Parameters["namespace"].(string); ok && namespace != "" {
 			if err := enforcer.CheckNamespace(namespace); err != nil {
 				debugLogger.Log("guardrail_namespace_denied", map[string]any{

@@ -183,6 +183,44 @@ func TestValidationUnknownToolRejected(t *testing.T) {
 	}
 }
 
+func TestCanonicalizePolicyActionResolvesNamespaceBeforeGuardrails(t *testing.T) {
+	action, err := canonicalizePolicyAction(plannerAction{ActionType: actionTypeExecute, ToolName: "validation.read_secret", Parameters: map[string]any{"name": "secret-a"}})
+	if err != nil {
+		t.Fatalf("canonicalize action: %v", err)
+	}
+	if action.Parameters["namespace"] != "default" {
+		t.Fatalf("missing namespace was not resolved before policy check: %#v", action.Parameters)
+	}
+	if _, err := canonicalizePolicyAction(plannerAction{ActionType: actionTypeExecute, ToolName: "validation.read_secret", Parameters: map[string]any{"name": "secret-a", "allow_namespaces": []string{"default"}}}); err == nil {
+		t.Fatal("model-controlled allow_namespaces accepted")
+	}
+}
+
+func TestValidationLoopRejectsOmittedDefaultNamespaceOutsideAllowList(t *testing.T) {
+	registry := tools.NewRegistry()
+	runCalled := false
+	if err := registry.Register(fakeTool{
+		name: "validation.read_secret",
+		run: func(context.Context, map[string]any) (map[string]any, error) {
+			runCalled = true
+			return map[string]any{"status": string(validation.StepValidated)}, nil
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	_, err := runValidationLoopForTestWithRegistry(t, registry, &stubValidationPlanner{actions: []plannerAction{{
+		ActionType: actionTypeExecute, ToolName: "validation.read_secret", Parameters: map[string]any{"name": "secret-a"},
+	}}}, func(cfg *config.Config) {
+		cfg.AllowListNamespaces = []string{"team-a"}
+	})
+	if err == nil || !strings.Contains(err.Error(), `namespace "default" is outside allow-list`) {
+		t.Fatalf("omitted namespace was not denied: %v", err)
+	}
+	if runCalled {
+		t.Fatal("tool ran after central namespace denial")
+	}
+}
+
 func TestValidationGraphSecretMapping(t *testing.T) {
 	tmpDir := t.TempDir()
 	cfg := config.Config{
@@ -936,8 +974,8 @@ func TestValidationGraphCheckPermissionsNodeMeta(t *testing.T) {
 	if nodeMeta["resource"] != "secrets" {
 		t.Errorf("expected nodeMeta[resource]==secrets, got %v", nodeMeta["resource"])
 	}
-	if nodeMeta["namespace"] != "test-ns" {
-		t.Errorf("expected nodeMeta[namespace]==test-ns, got %v", nodeMeta["namespace"])
+	if nodeMeta["namespace"] != "default" {
+		t.Errorf("expected canonical default namespace, got %v", nodeMeta["namespace"])
 	}
 }
 
@@ -1272,7 +1310,7 @@ func runValidationLoopForTest(t *testing.T, planner validationPlanner, opts ...v
 		t.Fatalf("register fake tool: %v", err)
 	}
 
-	return runValidationLoop(context.Background(), cfg, time.Now().UTC(), guardrails.New(nil, cfg.QPS, cfg.Burst), collector, evidence.NewSnapshotWriter(evidenceDir), registry, planner)
+	return runValidationLoop(context.Background(), cfg, time.Now().UTC(), guardrails.New(cfg.AllowListNamespaces, cfg.QPS, cfg.Burst), collector, evidence.NewSnapshotWriter(evidenceDir), registry, planner)
 }
 
 func runReactValidationLoopForTest(t *testing.T, registry *tools.Registry, responses []scriptedPlannerResponse, opts ...reactValidationTestOption) (ValidationResult, []map[string]any) {
@@ -2459,7 +2497,7 @@ func runValidationLoopForTestWithRegistry(t *testing.T, registry *tools.Registry
 		}
 	})
 
-	return runValidationLoop(context.Background(), cfg, time.Now().UTC(), guardrails.New(nil, cfg.QPS, cfg.Burst), collector, evidence.NewSnapshotWriter(evidenceDir), registry, planner)
+	return runValidationLoop(context.Background(), cfg, time.Now().UTC(), guardrails.New(cfg.AllowListNamespaces, cfg.QPS, cfg.Burst), collector, evidence.NewSnapshotWriter(evidenceDir), registry, planner)
 }
 
 // TestValidationEdgeFailureReasonSerialization is the focused regression test.
